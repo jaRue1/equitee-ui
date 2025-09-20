@@ -425,7 +425,7 @@ export default function Home() {
         <div className="w-full px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <img src="/logo.png" alt="EquiTee Logo" className="h-8 object-contain" />
+              <img src="/logo.png" alt="EquiTee Logo" className="h-8 object-contain ml-2" />
             </div>
 
             <div className="flex items-center space-x-3">

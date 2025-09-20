@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Slider from 'rc-slider'
+import 'rc-slider/assets/index.css'
 
 interface FilterState {
   priceRange: [number, number]
@@ -16,12 +18,14 @@ interface FilterPanelProps {
 }
 
 export default function FilterPanel({ onFiltersChange, isVisible, onToggle }: FilterPanelProps) {
-  const [filters, setFilters] = useState<FilterState>({
+  const initialFilters: FilterState = {
     priceRange: [0, 200],
     youthPrograms: false,
     difficultyRange: [1, 5],
     equipmentRental: false
-  })
+  }
+
+  const [filters, setFilters] = useState<FilterState>(initialFilters)
 
   // Notify parent of filter changes
   useEffect(() => {
@@ -33,24 +37,31 @@ export default function FilterPanel({ onFiltersChange, isVisible, onToggle }: Fi
   }
 
   const clearAllFilters = () => {
-    setFilters({
-      priceRange: [0, 200],
-      youthPrograms: false,
-      difficultyRange: [1, 5],
-      equipmentRental: false
-    })
+    setFilters(initialFilters)
+  }
+
+  // Check if filters have changed from initial state
+  const hasFiltersChanged = () => {
+    return (
+      filters.priceRange[0] !== initialFilters.priceRange[0] ||
+      filters.priceRange[1] !== initialFilters.priceRange[1] ||
+      filters.difficultyRange[0] !== initialFilters.difficultyRange[0] ||
+      filters.difficultyRange[1] !== initialFilters.difficultyRange[1] ||
+      filters.youthPrograms !== initialFilters.youthPrograms ||
+      filters.equipmentRental !== initialFilters.equipmentRental
+    )
   }
 
   return (
     <>
       {/* Filter Panel */}
       <div className={`
-        fixed right-4 top-20 bottom-20 w-80 bg-white rounded-2xl shadow-2xl z-40 overflow-hidden
+        fixed right-4 top-20 w-80 bg-white rounded-2xl shadow-2xl z-40
         transform transition-all duration-500 ease-in-out
         ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
       `}>
         {/* Header */}
-        <div className="bg-gray-800 text-white p-6 rounded-t-2xl">
+        <div className="bg-gray-800 text-white p-4 rounded-t-2xl">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold mb-1">Filters</h2>
@@ -66,85 +77,52 @@ export default function FilterPanel({ onFiltersChange, isVisible, onToggle }: Fi
         </div>
 
         {/* Content */}
-        <div className="p-6 h-full overflow-y-auto pb-24">
+        <div className="p-6">
+          <div className="space-y-6">
 
-          {/* Price Range Slider */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Price Range: ${filters.priceRange[0]} - ${filters.priceRange[1]}
-            </label>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500">Min Price</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  step="10"
-                  value={filters.priceRange[0]}
-                  onChange={(e) => updateFilters({
-                    priceRange: [parseInt(e.target.value), filters.priceRange[1]]
-                  })}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">Max Price</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  step="10"
-                  value={filters.priceRange[1]}
-                  onChange={(e) => updateFilters({
-                    priceRange: [filters.priceRange[0], parseInt(e.target.value)]
-                  })}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                />
-              </div>
+            {/* Price Range Slider */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Price Range: ${filters.priceRange[0]} - ${filters.priceRange[1]}
+              </label>
+              <Slider
+                range
+                min={0}
+                max={200}
+                step={10}
+                value={filters.priceRange}
+                onChange={(value) => updateFilters({ priceRange: value as [number, number] })}
+                trackStyle={[{ backgroundColor: '#059669' }]}
+                handleStyle={[
+                  { borderColor: '#059669', backgroundColor: '#059669' },
+                  { borderColor: '#059669', backgroundColor: '#059669' }
+                ]}
+                railStyle={{ backgroundColor: '#e5e7eb' }}
+              />
             </div>
-          </div>
 
-          {/* Difficulty Range */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Difficulty Level: {filters.difficultyRange[0]} - {filters.difficultyRange[1]} ⭐
-            </label>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500">Min Difficulty</label>
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  step="1"
-                  value={filters.difficultyRange[0]}
-                  onChange={(e) => updateFilters({
-                    difficultyRange: [parseInt(e.target.value), filters.difficultyRange[1]]
-                  })}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">Max Difficulty</label>
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  step="1"
-                  value={filters.difficultyRange[1]}
-                  onChange={(e) => updateFilters({
-                    difficultyRange: [filters.difficultyRange[0], parseInt(e.target.value)]
-                  })}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                />
-              </div>
+            {/* Difficulty Range Slider */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Difficulty: {filters.difficultyRange[0]} - {filters.difficultyRange[1]} ⭐
+              </label>
+              <Slider
+                range
+                min={1}
+                max={5}
+                step={1}
+                value={filters.difficultyRange}
+                onChange={(value) => updateFilters({ difficultyRange: value as [number, number] })}
+                trackStyle={[{ backgroundColor: '#059669' }]}
+                handleStyle={[
+                  { borderColor: '#059669', backgroundColor: '#059669' },
+                  { borderColor: '#059669', backgroundColor: '#059669' }
+                ]}
+                railStyle={{ backgroundColor: '#e5e7eb' }}
+              />
             </div>
-          </div>
 
-          {/* Amenity Checkboxes */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Amenities</label>
+            {/* Checkboxes */}
             <div className="space-y-3">
               <label className="flex items-center">
                 <input
@@ -165,38 +143,23 @@ export default function FilterPanel({ onFiltersChange, isVisible, onToggle }: Fi
                 <span className="text-sm text-gray-700">Equipment Rental</span>
               </label>
             </div>
+
           </div>
 
-          {/* Active Filters Summary */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Active Filters</h4>
-            <div className="flex flex-wrap gap-2">
-              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                ${filters.priceRange[0]}-${filters.priceRange[1]}
-              </span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                {filters.difficultyRange[0]}-{filters.difficultyRange[1]} ⭐
-              </span>
-              {filters.youthPrograms && (
-                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                  Youth Programs
-                </span>
-              )}
-              {filters.equipmentRental && (
-                <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
-                  Equipment Rental
-                </span>
-              )}
-            </div>
+          {/* Clear All Filters Button - Always visible, disabled when no changes */}
+          <div className="border-t border-gray-200 pt-4 mt-6">
+            <button
+              onClick={clearAllFilters}
+              disabled={!hasFiltersChanged()}
+              className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                hasFiltersChanged()
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Clear All Filters
+            </button>
           </div>
-
-          {/* Clear All Filters Button */}
-          <button
-            onClick={clearAllFilters}
-            className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-          >
-            Clear All Filters
-          </button>
         </div>
       </div>
 
@@ -213,28 +176,6 @@ export default function FilterPanel({ onFiltersChange, isVisible, onToggle }: Fi
         </button>
       )}
 
-      {/* Custom slider styles */}
-      <style jsx>{`
-        .slider::-webkit-slider-thumb {
-          appearance: none;
-          height: 20px;
-          width: 20px;
-          border-radius: 50%;
-          background: #059669;
-          cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .slider::-moz-range-thumb {
-          height: 20px;
-          width: 20px;
-          border-radius: 50%;
-          background: #059669;
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-      `}</style>
     </>
   )
 }

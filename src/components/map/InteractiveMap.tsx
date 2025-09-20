@@ -518,11 +518,11 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         onToggle={handleHeatMapToggle}
       />
 
-      {/* Map Legend - Top Right */}
+      {/* Map Legend - Top Left */}
       <MapLegend
         heatMapVisible={heatMapVisible}
         onHeatMapToggle={handleHeatMapToggle}
-        className="absolute top-4 right-4"
+        className="absolute top-4 left-4"
       />
 
     </div>
