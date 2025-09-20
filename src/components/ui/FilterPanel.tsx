@@ -56,7 +56,7 @@ export default function FilterPanel({ onFiltersChange, isVisible, onToggle }: Fi
     <>
       {/* Filter Panel */}
       <div className={`
-        absolute right-4 top-4 w-80 bg-white rounded-2xl shadow-2xl z-40
+        absolute right-4 top-4 w-80 bg-white rounded-2xl shadow-2xl z-20
         transform transition-all duration-500 ease-in-out
         ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
       `}>
@@ -167,7 +167,7 @@ export default function FilterPanel({ onFiltersChange, isVisible, onToggle }: Fi
       {!isVisible && (
         <button
           onClick={onToggle}
-          className="absolute right-4 top-4 bg-white text-gray-700 px-4 py-2 rounded-lg shadow-lg hover:shadow-xl border border-gray-300 transition-all z-30 flex items-center space-x-2"
+          className="absolute right-4 top-4 bg-white text-gray-700 px-4 py-2 rounded-lg shadow-lg hover:shadow-xl border border-gray-300 transition-all z-20 flex items-center space-x-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />

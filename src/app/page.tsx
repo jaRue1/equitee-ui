@@ -234,36 +234,38 @@ export default function Home() {
             <div className="flex justify-between items-center">
               <div className="flex items-center">
                 <img src="/logo.png" alt="EquiTee Logo" className="h-10 sm:h-12 object-contain" />
+                <span className="mx-3 text-gray-400 hidden sm:inline">•</span>
+                <span className="text-sm text-gray-600 hidden sm:inline">Democratizing Golf in South East Florida</span>
               </div>
               <GoogleAuth />
             </div>
           </div>
         </div>
 
-        {/* Hero Section with Parallax Background */}
+        {/* Hero Section - Modern Tech Design */}
         <div
           className="relative min-h-screen flex items-center justify-center"
           style={{
-            background: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.5)), url('https://images.pexels.com/photos/5644647/pexels-photo-5644647.jpeg')`,
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)), url('https://images.pexels.com/photos/5644647/pexels-photo-5644647.jpeg')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            backgroundAttachment: 'fixed'
+            backgroundRepeat: 'no-repeat'
           }}
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight drop-shadow-2xl">
                 Your South Florida
                 <span className="block text-green-400">Golf Journey Starts Here</span>
               </h2>
-              <p className="text-lg sm:text-xl md:text-2xl text-gray-200 mb-8 max-w-3xl mx-auto leading-relaxed">
-                Breaking barriers in the <strong>Golf Capital of the World</strong>. Find mentors, equipment, and courses designed for youth with limited access to golf resources.
+              <p className="text-lg sm:text-xl md:text-2xl text-white mb-8 max-w-3xl mx-auto leading-relaxed drop-shadow-lg">
+                Breaking barriers in the <strong className="text-green-400">Golf Capital of the World</strong>. Find mentors and courses designed for youth with limited access to golf resources.
               </p>
 
               {/* Mobile-friendly CTA */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-white/20 max-w-md mx-auto">
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">Start Your Journey</h3>
-                <p className="text-gray-200 mb-6 text-sm sm:text-base">
+              <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-2xl border border-gray-200 max-w-md mx-auto">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Start Your Journey</h3>
+                <p className="text-gray-600 mb-6 text-sm sm:text-base">
                   Connect with Google to discover your personalized golf path
                 </p>
                 <div className="flex justify-center">
@@ -274,15 +276,15 @@ export default function Home() {
           </div>
 
           {/* Scroll indicator */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white animate-bounce">
-            <div className="w-6 h-10 border-2 border-white rounded-full flex justify-center">
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+            <div className="w-6 h-10 border-2 border-white/80 rounded-full flex justify-center">
               <div className="w-1 h-3 bg-white rounded-full mt-2 animate-pulse"></div>
             </div>
           </div>
         </div>
 
         {/* Feature Cards Section */}
-        <div className="py-16 sm:py-20 bg-gradient-to-br from-green-50 via-blue-50 to-emerald-50">
+        <div className="py-16 sm:py-20 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center mb-16">
               <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6">
@@ -294,63 +296,55 @@ export default function Home() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-gray-200 hover:shadow-xl hover:border-green-400 transition-all duration-500 transform hover:-translate-y-2 opacity-0 animate-fadeInUp [animation-delay:200ms]">
                 <div className="text-4xl sm:text-5xl mb-4">🏌️‍♀️</div>
                 <h4 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-3">Find Your Course</h4>
                 <p className="text-gray-600 text-sm sm:text-base">Discover youth-friendly courses across Miami-Dade, Broward, and Palm Beach with beginner programs and affordable rates.</p>
               </div>
 
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-gray-200 hover:shadow-xl hover:border-green-400 transition-all duration-500 transform hover:-translate-y-2 opacity-0 animate-fadeInUp [animation-delay:400ms]">
                 <div className="text-4xl sm:text-5xl mb-4">🎯</div>
                 <h4 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-3">Personalized Guidance</h4>
                 <p className="text-gray-600 text-sm sm:text-base">Get customized recommendations based on your location, experience level, and financial situation.</p>
               </div>
 
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 sm:col-span-2 lg:col-span-1">
+              <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-gray-200 hover:shadow-xl hover:border-green-400 transition-all duration-500 transform hover:-translate-y-2 sm:col-span-2 lg:col-span-1 opacity-0 animate-fadeInUp [animation-delay:600ms]">
                 <div className="text-4xl sm:text-5xl mb-4">🌟</div>
                 <h4 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-3">Access Resources</h4>
-                <p className="text-gray-600 text-sm sm:text-base">Connect with free equipment programs, experienced mentors, and scholarship opportunities.</p>
+                <p className="text-gray-600 text-sm sm:text-base">Connect with mentors and scholarship opportunities.</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* South Florida Focus Section with Parallax */}
-        <div
-          className="relative py-20 sm:py-32"
-          style={{
-            background: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3)), url('https://images.pexels.com/photos/30147234/pexels-photo-30147234.jpeg')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundAttachment: 'fixed'
-          }}
-        >
+        {/* South Florida Focus Section - Modern Tech Design */}
+        <div className="relative py-20 sm:py-32 bg-gradient-to-br from-gray-50 to-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
-              <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-8">
+              <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-8">
                 The Golf Capital of the World
               </h3>
-              <p className="text-lg sm:text-xl text-gray-200 mb-12 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-700 mb-12 leading-relaxed">
                 South Florida is home to over 400 golf courses, perfect weather year-round, and a thriving golf community.
-                But access barriers have kept many talented youth on the sidelines. <strong>That changes now.</strong>
               </p>
 
+                But access barriers have kept many talented youth on the sidelines. <strong className="text-green-600">That changes now.</strong>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div className="text-center">
-                  <div className="text-3xl sm:text-4xl font-bold text-green-400 mb-2">400+</div>
-                  <p className="text-gray-200 text-sm sm:text-base">Golf Courses</p>
+                <div className="text-center bg-white rounded-xl p-6 shadow-lg border border-gray-200 opacity-0 animate-fadeInUp hover:scale-105 transition-transform duration-300 [animation-delay:200ms]">
+                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-green-600 to-green-500 bg-clip-text text-transparent mb-2">400+</div>
+                  <p className="text-gray-700 text-sm sm:text-base">Golf Courses</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl sm:text-4xl font-bold text-blue-400 mb-2">365</div>
-                  <p className="text-gray-200 text-sm sm:text-base">Days of Golf Weather</p>
+                <div className="text-center bg-white rounded-xl p-6 shadow-lg border border-gray-200 opacity-0 animate-fadeInUp hover:scale-105 transition-transform duration-300 [animation-delay:400ms]">
+                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent mb-2">365</div>
+                  <p className="text-gray-700 text-sm sm:text-base">Days of Golf Weather</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl sm:text-4xl font-bold text-yellow-400 mb-2">50+</div>
-                  <p className="text-gray-200 text-sm sm:text-base">Youth Programs</p>
+                <div className="text-center bg-white rounded-xl p-6 shadow-lg border border-gray-200 opacity-0 animate-fadeInUp hover:scale-105 transition-transform duration-300 [animation-delay:600ms]">
+                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-2">50+</div>
+                  <p className="text-gray-700 text-sm sm:text-base">Youth Programs</p>
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl sm:text-4xl font-bold text-purple-400 mb-2">Free</div>
-                  <p className="text-gray-200 text-sm sm:text-base">For Everyone</p>
+                <div className="text-center bg-white rounded-xl p-6 shadow-lg border border-gray-200 opacity-0 animate-fadeInUp hover:scale-105 transition-transform duration-300 [animation-delay:800ms]">
+                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-2">Free</div>
+                  <p className="text-gray-700 text-sm sm:text-base">For Everyone</p>
                 </div>
               </div>
             </div>
@@ -370,33 +364,25 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div className="text-center group">
-                  <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="text-center group opacity-0 animate-fadeInUp [animation-delay:300ms]">
+                  <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                     <span className="text-2xl sm:text-3xl">⛳</span>
                   </div>
                   <h4 className="font-bold text-gray-900 mb-3 text-lg sm:text-xl">Youth Programs</h4>
                   <p className="text-gray-600 text-sm sm:text-base">Connect with PGA-certified instructors and youth academies offering free or low-cost lessons.</p>
                 </div>
 
-                <div className="text-center group">
-                  <div className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <span className="text-2xl sm:text-3xl">🎁</span>
-                  </div>
-                  <h4 className="font-bold text-gray-900 mb-3 text-lg sm:text-xl">Free Equipment</h4>
-                  <p className="text-gray-600 text-sm sm:text-base">Access donated clubs, balls, and gear through our partner network and equipment lending programs.</p>
-                </div>
-
-                <div className="text-center group">
-                  <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <div className="text-center group opacity-0 animate-fadeInUp [animation-delay:500ms]">
+                  <div className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                     <span className="text-2xl sm:text-3xl">👨‍🏫</span>
                   </div>
                   <h4 className="font-bold text-gray-900 mb-3 text-lg sm:text-xl">Expert Mentors</h4>
                   <p className="text-gray-600 text-sm sm:text-base">Connect with volunteers, coaches, and professionals who want to share their love of the game.</p>
                 </div>
 
-                <div className="text-center group">
-                  <div className="bg-gradient-to-br from-orange-100 to-orange-200 rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <div className="text-center group opacity-0 animate-fadeInUp [animation-delay:700ms]">
+                  <div className="bg-gradient-to-br from-green-100 to-blue-100 rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                     <span className="text-2xl sm:text-3xl">🗺️</span>
                   </div>
                   <h4 className="font-bold text-gray-900 mb-3 text-lg sm:text-xl">Interactive Map</h4>
@@ -408,21 +394,21 @@ export default function Home() {
         </div>
 
         {/* Final CTA Section */}
-        <div className="py-16 sm:py-20 bg-gradient-to-br from-green-600 via-blue-600 to-emerald-600">
+        <div className="py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-white border-t border-gray-200">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
-              <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6">
+              <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Ready to Tee Off?
               </h3>
-              <p className="text-lg sm:text-xl text-green-100 mb-8 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-700 mb-8 leading-relaxed">
                 Join our community of young golfers, mentors, and advocates working together to make golf accessible in South Florida.
               </p>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-white/20 max-w-md mx-auto">
+              <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-2xl border border-gray-200 max-w-md mx-auto">
                 <div className="flex justify-center">
                   <GoogleAuth />
                 </div>
-                <p className="text-gray-200 mt-4 text-sm text-center">
+                <p className="text-gray-600 mt-4 text-sm text-center">
                   No equipment required • All skill levels welcome
                 </p>
               </div>

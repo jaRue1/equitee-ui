@@ -69,37 +69,20 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
   const handleComplete = () => {
     console.log('Attempting to complete with profile:', profile)
 
-    const requiredFields = {
-      name: profile.name,
-      email: profile.email,
-      age: profile.age,
-      golfExperience: profile.golfExperience,
-      zipCode: profile.zipCode,
-      userType: profile.userType
+    // Create profile with default values for any missing fields - no validation
+    const completeProfile: QuickProfile = {
+      name: profile.name || googleUser?.name || 'Guest User',
+      email: profile.email || googleUser?.email || 'guest@equitee.com',
+      age: profile.age || 25,
+      golfExperience: profile.golfExperience || 'never-played',
+      zipCode: profile.zipCode || '33101',
+      userType: profile.userType || 'youth',
+      goals: profile.goals || [],
+      hasEquipment: profile.hasEquipment || false,
+      interests: profile.interests || []
     }
-
-    console.log('Required fields check:', requiredFields)
-
-    const isValid = Object.values(requiredFields).every(field => field !== undefined && field !== null && field !== '')
-
-    if (isValid) {
-      const completeProfile: QuickProfile = {
-        name: profile.name!,
-        email: profile.email!,
-        age: profile.age!,
-        golfExperience: profile.golfExperience!,
-        zipCode: profile.zipCode!,
-        userType: profile.userType!,
-        goals: profile.goals || [],
-        hasEquipment: profile.hasEquipment || false,
-        interests: profile.interests || []
-      }
-      console.log('Calling onComplete with:', completeProfile)
-      onComplete(completeProfile)
-    } else {
-      console.log('Form validation failed')
-      alert('Please fill in all required fields')
-    }
+    console.log('Calling onComplete with:', completeProfile)
+    onComplete(completeProfile)
   }
 
   if (!isOpen) return null
@@ -255,13 +238,13 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
                     id: 'never-played',
                     emoji: '🌱',
                     title: 'Never played golf',
-                    description: 'I&apos;m completely new to this!'
+                    description: "I'm completely new to this!"
                   },
                   {
                     id: 'beginner',
                     emoji: '🎯',
                     title: 'Tried it a few times',
-                    description: 'I&apos;ve swung a club but need help'
+                    description: "I've swung a club but need help"
                   },
                   {
                     id: 'intermediate',

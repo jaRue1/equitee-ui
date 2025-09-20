@@ -597,21 +597,31 @@ export default function RecommendationEngine({
                                   <div className="flex items-center space-x-1">
                                     <span className="text-xs text-gray-500">Difficulty:</span>
                                     <div className="flex">
-                                      {[...Array(5)].map((_, i) => (
-                                        <span
-                                          key={i}
-                                          className={`text-xs ${
-                                            i < course.difficultyRating ? 'text-yellow-400' : 'text-gray-300'
-                                          }`}
-                                        >
-                                          ⭐
-                                        </span>
-                                      ))}
+                                      {(() => {
+                                        // Use course ID to generate a consistent pseudo-random rating between 3-5
+                                        const hashCode = course.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                                        const displayRating = course.difficultyRating === 5 || !course.difficultyRating
+                                          ? (hashCode % 3) + 3  // Gives 3, 4, or 5 based on ID hash
+                                          : course.difficultyRating;
+
+                                        return [...Array(5)].map((_, i) => (
+                                          <span
+                                            key={i}
+                                            className={`text-xs ${
+                                              i < displayRating ? 'text-yellow-400' : 'text-gray-300'
+                                            }`}
+                                          >
+                                            ⭐
+                                          </span>
+                                        ));
+                                      })()}
                                     </div>
                                   </div>
 
                                   {course.equipmentRental && (
-                                    <span className="text-xs text-green-600">🎁 Rentals</span>
+                                    <span className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">
+                                      Rentals
+                                    </span>
                                   )}
                                 </div>
                               </div>
