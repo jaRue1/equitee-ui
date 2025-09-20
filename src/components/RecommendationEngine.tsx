@@ -31,13 +31,15 @@ interface RecommendationEngineProps {
   onActionClick: (recommendation: Recommendation) => void
   isVisible: boolean
   onToggle: () => void
+  isFixedSidebar?: boolean
 }
 
 export default function RecommendationEngine({
   userProfile,
   onActionClick,
   isVisible,
-  onToggle
+  onToggle,
+  isFixedSidebar = false
 }: RecommendationEngineProps) {
   const [activeStep, setActiveStep] = useState(0)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
@@ -166,9 +168,151 @@ export default function RecommendationEngine({
     return recs
   }
 
-  const progressPercentage = userProfile?.completedSteps?.length
-    ? (userProfile.completedSteps.length / recommendations.length) * 100
+  const progressPercentage = userProfile?.completedSteps?.length && recommendations.length > 0
+    ? Math.min((userProfile.completedSteps.length / recommendations.length) * 100, 100)
     : 0
+
+  const isProgressComplete = progressPercentage >= 100
+
+  if (isFixedSidebar) {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="bg-gray-800 text-white p-6 flex-shrink-0">
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-xl font-bold mb-1">
+                {userProfile?.name ? `Hey ${userProfile.name}!` : 'Your Golf Journey'}
+              </h2>
+              <p className="text-gray-300 text-sm">
+                {userProfile?.golfExperience === 'never-played'
+                  ? 'Let\'s get you started!'
+                  : 'Your next steps await'}
+              </p>
+            </div>
+            <button
+              onClick={onToggle}
+              className="text-white hover:text-gray-200 text-xl transform hover:scale-110 transition-transform"
+            >
+              ←
+            </button>
+          </div>
+
+          {/* Progress Bar */}
+          {userProfile && !isProgressComplete && (
+            <div className="mt-4">
+              <div className="flex justify-between text-sm mb-2">
+                <span>Progress</span>
+                <span>{Math.round(progressPercentage)}%</span>
+              </div>
+              <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
+                <div
+                  className="bg-white h-2 rounded-full transition-all duration-700"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto flex-1">
+          {!userProfile ? (
+            // Quick Start for new users
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🏌️</div>
+              <h3 className="text-xl font-bold mb-2">New to Golf?</h3>
+              <p className="text-gray-600 mb-6">
+                Take our quick quiz to get personalized recommendations!
+              </p>
+              <button
+                onClick={() => onActionClick(recommendations[0])}
+                className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
+              >
+                🎯 Start Your Golf Journey
+              </button>
+            </div>
+          ) : (
+            // Personalized recommendations
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg mb-4">Recommended for You</h3>
+
+              {recommendations.map((rec, index) => (
+                <div
+                  key={rec.id}
+                  className={`
+                    border rounded-xl p-4 transition-all duration-300 hover:shadow-lg transform hover:scale-[1.02]
+                    ${rec.priority === 'high' ? 'border-green-200 bg-green-50' :
+                      rec.priority === 'medium' ? 'border-blue-200 bg-blue-50' :
+                      'border-gray-200 bg-gray-50'}
+                    ${rec.completed ? 'opacity-60' : ''}
+                  `}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="text-2xl">{rec.icon}</div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-semibold text-sm">{rec.title}</h4>
+                        {rec.priority === 'high' && (
+                          <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">
+                            Recommended
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-600 text-xs mb-3">{rec.description}</p>
+
+                      {/* Details */}
+                      <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
+                        {rec.price && <span>💰 {rec.price}</span>}
+                        {rec.distance && <span>📍 {rec.distance}</span>}
+                        {rec.estimatedTime && <span>⏱️ {rec.estimatedTime}</span>}
+                      </div>
+
+                      <button
+                        onClick={() => onActionClick(rec)}
+                        disabled={rec.completed}
+                        className={`
+                          w-full py-2 px-4 rounded-lg text-sm font-medium transition-all
+                          ${rec.completed
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : rec.priority === 'high'
+                              ? 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-105'
+                              : 'bg-white border border-gray-300 hover:bg-gray-50 transform hover:scale-105'
+                          }
+                        `}
+                      >
+                        {rec.completed ? '✓ Completed' : rec.actionText}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h4 className="font-semibold text-sm mb-3">Quick Actions</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <button className="bg-white border border-gray-300 py-2 px-3 rounded-lg text-xs hover:bg-gray-50 transition-colors">
+                📞 Contact Coach
+              </button>
+              <button className="bg-white border border-gray-300 py-2 px-3 rounded-lg text-xs hover:bg-gray-50 transition-colors">
+                🗓️ Book Lesson
+              </button>
+              <button className="bg-white border border-gray-300 py-2 px-3 rounded-lg text-xs hover:bg-gray-50 transition-colors">
+                🎁 Find Free Gear
+              </button>
+              <button className="bg-white border border-gray-300 py-2 px-3 rounded-lg text-xs hover:bg-gray-50 transition-colors">
+                👥 Join Group
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -200,7 +344,7 @@ export default function RecommendationEngine({
           </div>
 
           {/* Progress Bar */}
-          {userProfile && (
+          {userProfile && !isProgressComplete && (
             <div className="mt-4">
               <div className="flex justify-between text-sm mb-2">
                 <span>Progress</span>

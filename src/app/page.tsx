@@ -148,9 +148,47 @@ export default function Home() {
     }
   }, [session, userProfile])
 
+  // Helper function to resize map while preserving right edge
+  const resizeMapPreservingRightEdge = () => {
+    if (!mapRef.current) return
+
+    // Get current right edge before resize
+    const currentBounds = mapRef.current.getBounds()
+    const rightLng = currentBounds.getEast()
+
+    // Resize the map
+    mapRef.current.resize()
+
+    // Adjust center to keep right edge fixed
+    const newBounds = mapRef.current.getBounds()
+    const newRightLng = newBounds.getEast()
+    const lngDiff = rightLng - newRightLng
+
+    if (Math.abs(lngDiff) > 0.0001) {
+      const currentCenter = mapRef.current.getCenter()
+      mapRef.current.setCenter([currentCenter.lng + lngDiff, currentCenter.lat])
+    }
+  }
+
   // Toggle sidebar
   const toggleSidebar = () => {
     setIsSidebarVisible(!isSidebarVisible)
+
+    // Trigger map resize immediately and during animation with right edge preservation
+    if (mapRef.current) {
+      resizeMapPreservingRightEdge()
+
+      // Also trigger resize during animation for smooth transition
+      const resizeInterval = setInterval(() => {
+        resizeMapPreservingRightEdge()
+      }, 16) // ~60fps
+
+      // Clean up after animation completes
+      setTimeout(() => {
+        clearInterval(resizeInterval)
+        resizeMapPreservingRightEdge()
+      }, 300)
+    }
   }
 
   // Go back to recommendations
@@ -163,23 +201,11 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-br from-green-100 to-blue-100">
       {/* Streamlined Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 relative z-30">
-        <div className="container mx-auto px-4 py-3">
+        <div className="w-full px-4 py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-6">
-              <div>
-                <h1 className="text-2xl font-bold text-green-700">EquiTee</h1>
-                <p className="text-sm text-gray-600">Your Golf Journey Starts Here</p>
-              </div>
-
-              {userProfile && (
-                <div className="hidden md:flex items-center space-x-4 text-sm">
-                  <span className="text-gray-600">Hey {userProfile.name}!</span>
-                  <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full">
-                    {userProfile.golfExperience === 'never-played' ? '🌱 New Golfer' :
-                     userProfile.golfExperience === 'beginner' ? '🎯 Beginner' : '⛳ Player'}
-                  </div>
-                </div>
-              )}
+            <div>
+              <h1 className="text-2xl font-bold text-green-700">EquiTee</h1>
+              <p className="text-sm text-gray-600">Your Golf Journey Starts Here</p>
             </div>
 
             <div className="flex items-center space-x-3">
@@ -221,138 +247,141 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Map Container */}
-      <div className="h-[calc(100vh-80px)] relative">
-        <InteractiveMap
-          onCourseSelect={handleCourseSelect}
-          selectedCourseId={selectedCourse?.id}
-          mapRef={mapRef}
-        />
+      {/* Main Content Layout */}
+      <div className="h-[calc(100vh-80px)] flex">
+        {/* Fixed Left Sidebar */}
+        <div className={`
+          bg-white shadow-xl flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
+          ${isSidebarVisible ? 'w-96' : 'w-0'}
+        `}>
+          {isSidebarVisible && (
+            <>
+              {sidebarMode === 'recommendations' ? (
+                <RecommendationEngine
+                  userProfile={userProfile}
+                  onActionClick={handleRecommendationAction}
+                  isVisible={true}
+                  onToggle={toggleSidebar}
+                  isFixedSidebar={true}
+                />
+              ) : (
+                <div className="h-full flex flex-col">
+                  {/* Course Detail Header */}
+                  <div className="bg-gray-800 text-white p-6 flex-shrink-0">
+                    <div className="flex justify-between items-start">
+                      <button
+                        onClick={backToRecommendations}
+                        className="text-white hover:text-gray-200 text-sm flex items-center space-x-1"
+                      >
+                        <span>←</span>
+                        <span>Back to Recommendations</span>
+                      </button>
+                    </div>
 
-        {/* Unified Sidebar */}
-        {sidebarMode === 'recommendations' ? (
-          <RecommendationEngine
-            userProfile={userProfile}
-            onActionClick={handleRecommendationAction}
-            isVisible={isSidebarVisible}
-            onToggle={toggleSidebar}
-          />
-        ) : (
-          <div className={`
-            fixed right-4 top-20 bottom-20 w-96 bg-white rounded-2xl shadow-2xl z-40
-            transform transition-all duration-500 ease-in-out
-            ${isSidebarVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
-          `}>
-            {/* Course Detail Header */}
-            <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-2xl">
-              <div className="flex justify-between items-start">
-                <button
-                  onClick={backToRecommendations}
-                  className="text-white hover:text-gray-200 text-sm flex items-center space-x-1"
-                >
-                  <span>←</span>
-                  <span>Back to Recommendations</span>
-                </button>
-                <button
-                  onClick={toggleSidebar}
-                  className="text-white hover:text-gray-200 text-xl"
-                >
-                  →
-                </button>
-              </div>
+                    {selectedCourse && (
+                      <div className="mt-4">
+                        <h2 className="text-xl font-bold">{selectedCourse.name}</h2>
+                        <p className="text-gray-300 text-sm">{selectedCourse.address}</p>
+                        <div className="flex items-center space-x-4 mt-3">
+                          <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                            ${selectedCourse.greenFeeMin}-${selectedCourse.greenFeeMax}
+                          </span>
+                          {selectedCourse.youthPrograms && (
+                            <span className="bg-blue-400 px-3 py-1 rounded-full text-sm">
+                              Youth Programs
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-              {selectedCourse && (
-                <div className="mt-4">
-                  <h2 className="text-xl font-bold">{selectedCourse.name}</h2>
-                  <p className="text-green-100 text-sm">{selectedCourse.address}</p>
-                  <div className="flex items-center space-x-4 mt-3">
-                    <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
-                      ${selectedCourse.greenFeeMin}-${selectedCourse.greenFeeMax}
-                    </span>
-                    {selectedCourse.youthPrograms && (
-                      <span className="bg-blue-400 px-3 py-1 rounded-full text-sm">
-                        Youth Programs
-                      </span>
+                  {/* Course Detail Content */}
+                  <div className="p-6 overflow-y-auto flex-1">
+                    {selectedCourse && (
+                      <div className="space-y-6">
+                        {/* Quick Actions */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <button className="bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                            📞 Call Course
+                          </button>
+                          <button className="bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                            🗓️ Book Tee Time
+                          </button>
+                        </div>
+
+                        {/* Course Info */}
+                        <div>
+                          <h3 className="font-semibold mb-3">Course Details</h3>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Difficulty</span>
+                              <span>{selectedCourse.difficultyRating}/5 ⭐</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Equipment Rental</span>
+                              <span>{selectedCourse.equipmentRental ? '✅ Available' : '❌ Not Available'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Youth Programs</span>
+                              <span>{selectedCourse.youthPrograms ? '✅ Yes' : '❌ No'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Programs (if available) */}
+                        {selectedCourse.youthPrograms && (
+                          <div>
+                            <h3 className="font-semibold mb-3">Youth Programs</h3>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <h4 className="font-medium mb-2">Junior Golf Academy</h4>
+                              <p className="text-gray-600 text-sm mb-3">
+                                Perfect for young golfers to learn fundamentals and meet peers.
+                              </p>
+                              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors">
+                                Learn More
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Distance & Directions */}
+                        <div>
+                          <h3 className="font-semibold mb-3">Getting There</h3>
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm text-gray-600 mb-3">{selectedCourse.address}</p>
+                            <button className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
+                              🗺️ Get Directions
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
               )}
-            </div>
+            </>
+          )}
+        </div>
 
-            {/* Course Detail Content */}
-            <div className="p-4 overflow-y-auto h-full pb-20">
-              {selectedCourse && (
-                <div className="space-y-6">
-                  {/* Quick Actions */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <button className="bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-                      📞 Call Course
-                    </button>
-                    <button className="bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                      🗓️ Book Tee Time
-                    </button>
-                  </div>
+        {/* Map Container */}
+        <div className="flex-1 relative">
+          <InteractiveMap
+            onCourseSelect={handleCourseSelect}
+            selectedCourseId={selectedCourse?.id}
+            mapRef={mapRef}
+          />
 
-                  {/* Course Info */}
-                  <div>
-                    <h3 className="font-semibold mb-3">Course Details</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Difficulty</span>
-                        <span>{selectedCourse.difficultyRating}/5 ⭐</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Equipment Rental</span>
-                        <span>{selectedCourse.equipmentRental ? '✅ Available' : '❌ Not Available'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Youth Programs</span>
-                        <span>{selectedCourse.youthPrograms ? '✅ Yes' : '❌ No'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Programs (if available) */}
-                  {selectedCourse.youthPrograms && (
-                    <div>
-                      <h3 className="font-semibold mb-3">Youth Programs</h3>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h4 className="font-medium mb-2">Junior Golf Academy</h4>
-                        <p className="text-gray-600 text-sm mb-3">
-                          Perfect for young golfers to learn fundamentals and meet peers.
-                        </p>
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors">
-                          Learn More
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Distance & Directions */}
-                  <div>
-                    <h3 className="font-semibold mb-3">Getting There</h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-sm text-gray-600 mb-3">{selectedCourse.address}</p>
-                      <button className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
-                        🗺️ Get Directions
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Toggle Button (when sidebar is hidden) */}
-        {!isSidebarVisible && (
-          <button
-            onClick={toggleSidebar}
-            className="fixed right-4 top-32 bg-gradient-to-r from-green-500 to-blue-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all z-30"
-          >
-            <span className="text-lg">🎯</span>
-          </button>
-        )}
+          {/* Toggle Button (when sidebar is hidden) */}
+          {!isSidebarVisible && (
+            <button
+              onClick={toggleSidebar}
+              className="absolute left-4 top-8 bg-gradient-to-r from-green-500 to-blue-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all z-30"
+            >
+              <span className="text-lg">→</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Quick Start Wizard */}

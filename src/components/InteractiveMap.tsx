@@ -107,10 +107,41 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
       mapRef.current = map.current
     }
 
+    // Set up ResizeObserver for smooth resizing that preserves right edge
+    const resizeObserver = new ResizeObserver(() => {
+      if (map.current) {
+        // Get current map bounds and container dimensions
+        const currentBounds = map.current.getBounds()
+        const container = map.current.getContainer()
+        const containerRect = container.getBoundingClientRect()
+
+        // Calculate the right edge in geographic coordinates
+        const rightLng = currentBounds.getEast()
+
+        // Resize the map
+        map.current.resize()
+
+        // After resize, adjust the center to keep the right edge fixed
+        const newBounds = map.current.getBounds()
+        const newRightLng = newBounds.getEast()
+        const lngDiff = rightLng - newRightLng
+
+        if (Math.abs(lngDiff) > 0.0001) { // Only adjust if there's a meaningful difference
+          const currentCenter = map.current.getCenter()
+          map.current.setCenter([currentCenter.lng + lngDiff, currentCenter.lat])
+        }
+      }
+    })
+
+    if (mapContainer.current) {
+      resizeObserver.observe(mapContainer.current)
+    }
+
     return () => {
       if (map.current) {
         map.current.remove()
       }
+      resizeObserver.disconnect()
     }
   }, [])
 
@@ -153,11 +184,23 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
   const addCourseMarkers = () => {
     if (!map.current) return
 
-    let activeMarker: mapboxgl.Marker | null = null
-    let activePopup: mapboxgl.Popup | null = null
+    // Store all markers to ensure only one can be active at a time
+    const allMarkers: { marker: mapboxgl.Marker; popup: mapboxgl.Popup; element: HTMLElement; course: Course }[] = []
+
+    // Function to clear all active states
+    const clearAllActiveStates = () => {
+      allMarkers.forEach(({ popup, element }) => {
+        popup.remove() // Close all popups
+        const markerDiv = element.querySelector('div')
+        if (markerDiv) {
+          markerDiv.classList.remove('ring-4', 'ring-white', 'ring-opacity-75', 'scale-125')
+        }
+      })
+    }
 
     // Add course markers
-    sampleCourses.forEach((course) => {
+    if (Array.isArray(sampleCourses)) {
+      sampleCourses.forEach((course) => {
       // Create custom marker element
       const markerElement = document.createElement('div')
       markerElement.className = 'course-marker'
@@ -198,36 +241,27 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         .setLngLat([course.lng, course.lat])
         .addTo(map.current!)
 
+      // Store marker info
+      allMarkers.push({ marker, popup, element: markerElement, course })
+
       // Add click handler
       markerElement.addEventListener('click', () => {
-        // Close any existing popup
-        if (activePopup) {
-          activePopup.remove()
-        }
+        // First, clear all active states
+        clearAllActiveStates()
 
-        // Remove active styling from previous marker
-        if (activeMarker) {
-          const prevElement = activeMarker.getElement().querySelector('div')
-          if (prevElement) {
-            prevElement.classList.remove('ring-4', 'ring-white', 'ring-opacity-75', 'scale-125')
-          }
-        }
-
-        // Add active styling to current marker
+        // Add active styling to current marker only
         const currentElement = markerElement.querySelector('div')
         if (currentElement) {
           currentElement.classList.add('ring-4', 'ring-white', 'ring-opacity-75', 'scale-125')
         }
 
-        // Set popup and marker as active
+        // Show popup for this marker only
         popup.setLngLat([course.lng, course.lat]).addTo(map.current!)
-        activePopup = popup
-        activeMarker = marker
 
-        // Zoom to the marker with higher zoom level
+        // Center on the marker with moderate zoom
         map.current!.flyTo({
           center: [course.lng, course.lat],
-          zoom: 16, // Higher zoom level
+          zoom: 12, // Moderate zoom level
           duration: 1500,
           essential: true
         })
@@ -244,37 +278,38 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         if (currentElement) {
           currentElement.classList.remove('ring-4', 'ring-white', 'ring-opacity-75', 'scale-125')
         }
-        activePopup = null
-        activeMarker = null
       })
     })
+    }
 
     // Global function for popup button clicks
     (window as any).selectCourse = (courseId: string) => {
-      const course = sampleCourses.find(c => c.id === courseId)
+      const course = Array.isArray(sampleCourses) ? sampleCourses.find(c => c.id === courseId) : null
       if (course && onCourseSelect) {
         onCourseSelect(course)
       }
     }
 
     // Add source and layer for clustering if needed
-    map.current!.addSource('courses', {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: sampleCourses.map(course => ({
-          type: 'Feature',
-          properties: course,
-          geometry: {
-            type: 'Point',
-            coordinates: [course.lng, course.lat]
-          }
-        }))
-      },
-      cluster: true,
-      clusterMaxZoom: 14,
-      clusterRadius: 50
-    })
+    if (Array.isArray(sampleCourses)) {
+      map.current!.addSource('courses', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: sampleCourses.map(course => ({
+            type: 'Feature',
+            properties: course,
+            geometry: {
+              type: 'Point',
+              coordinates: [course.lng, course.lat]
+            }
+          }))
+        },
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50
+      })
+    }
   }
 
   return (
