@@ -1,18 +1,6 @@
 'use client'
 
-interface Equipment {
-  id: string
-  title: string
-  description: string
-  equipmentType: 'driver' | 'woods' | 'irons' | 'wedges' | 'putter' | 'bag'
-  condition: 'new' | 'excellent' | 'good' | 'fair'
-  ageRange: string
-  price: number
-  images: string[]
-  status: 'available' | 'pending' | 'donated' | 'sold'
-  distance?: string
-  userName: string
-}
+import { Equipment } from '@/lib/api'
 
 interface EquipmentCardProps {
   equipment: Equipment
