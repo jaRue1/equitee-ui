@@ -91,7 +91,7 @@ export default function ProfileDropdown({ userProfile, onResetProfile }: Profile
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200" style={{ zIndex: 99999 }}>
           {/* Profile Header */}
           <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-4 rounded-t-lg">
             <div className="flex items-center space-x-3">

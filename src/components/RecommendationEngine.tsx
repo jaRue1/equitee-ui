@@ -543,7 +543,7 @@ export default function RecommendationEngine({
               {(activeFilter === 'courses' || activeFilter === 'all') && (
                 <>
                   <h4 className="font-semibold text-sm mb-3">
-                    {activeFilter === 'all' ? 'Golf Courses Near You' : 'Golf Courses'}
+                    {activeFilter === 'all' ? 'Recommended Courses Near You' : 'Recommended Courses'}
                   </h4>
                   {coursesLoading ? (
                     <div className="text-center py-4">

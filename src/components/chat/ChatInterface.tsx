@@ -266,7 +266,7 @@ export default function ChatInterface({ onRecommendations, onCourseNavigate, use
   }
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 ${className}`}>
+    <div className={`absolute bottom-4 right-4 z-50 ${className}`}>
       {!chatState.isOpen ? (
         <button
           onClick={toggleChat}

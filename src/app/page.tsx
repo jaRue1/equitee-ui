@@ -456,26 +456,11 @@ export default function Home() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <img src="/logo.png" alt="EquiTee Logo" className="h-8 object-contain ml-2" />
+              <span className="mx-3 text-gray-400">•</span>
+              <span className="text-sm text-gray-600">Democratizing Golf in South East Florida</span>
             </div>
 
             <div className="flex items-center space-x-3">
-              {userProfile && (
-                <>
-                  <Link
-                    href="/equipment"
-                    className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                  >
-                    Equipment
-                  </Link>
-
-                  <Link
-                    href="/courses"
-                    className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                  >
-                    Courses
-                  </Link>
-                </>
-              )}
 
               <ProfileDropdown
                 userProfile={userProfile}
@@ -568,28 +553,19 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Programs (if available) */}
-                    {selectedCourse.youthPrograms && (
-                      <div>
-                        <h3 className="font-semibold mb-3">Youth Programs</h3>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <h4 className="font-medium mb-2">Junior Golf Academy</h4>
-                          <p className="text-gray-600 text-sm mb-3">
-                            Perfect for young golfers to learn fundamentals and meet peers.
-                          </p>
-                          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors">
-                            Learn More
-                          </button>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Distance & Directions */}
                     <div>
                       <h3 className="font-semibold mb-3">Getting There</h3>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <p className="text-sm text-gray-600 mb-3">{selectedCourse.address}</p>
-                        <button className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
+                        <button
+                          onClick={() => {
+                            const encodedAddress = encodeURIComponent(selectedCourse.address)
+                            window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank')
+                          }}
+                          className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                        >
                           🗺️ Get Directions
                         </button>
                       </div>
