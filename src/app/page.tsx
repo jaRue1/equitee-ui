@@ -8,7 +8,10 @@ import RecommendationEngine from '@/components/RecommendationEngine'
 import QuickStartWizard from '@/components/QuickStartWizard'
 import GoogleAuth from '@/components/GoogleAuth'
 import ProfileDropdown from '@/components/ProfileDropdown'
+import ChatInterface from '@/components/chat/ChatInterface'
+import { useGeolocation } from '@/hooks/useGeolocation'
 import { Course } from '@/lib/api'
+import { type CourseRecommendation } from '@/types/map'
 import mapboxgl from 'mapbox-gl'
 
 interface UserProfile {
@@ -43,6 +46,8 @@ interface Recommendation {
 export default function Home() {
   const { data: session } = useSession()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const { position: userLocation } = useGeolocation()
+
 
   // Load user profile from localStorage on mount
   useEffect(() => {
@@ -141,6 +146,25 @@ export default function Home() {
   const backToRecommendations = () => {
     setSidebarMode('recommendations')
     setSelectedCourse(null)
+  }
+
+  // Handle chat recommendations
+  const handleChatRecommendations = (recommendations: CourseRecommendation[]) => {
+    console.log('Chat recommendations received:', recommendations)
+
+    // If we have recommendations, highlight the first course on the map
+    if (recommendations.length > 0 && mapRef.current) {
+      const firstCourse = recommendations[0].course
+      mapRef.current.flyTo({
+        center: [firstCourse.lng, firstCourse.lat],
+        zoom: 14,
+        duration: 1500
+      })
+
+      // Auto-select the first recommended course
+      setSelectedCourse(firstCourse)
+      setSidebarMode('course-detail')
+    }
   }
 
   // Show landing page for unauthenticated users
@@ -421,6 +445,8 @@ export default function Home() {
               isVisible={true}
               onToggle={() => {}} // No-op since we don't collapse anymore
               isFixedSidebar={true}
+              userLocation={userLocation || undefined}
+              onCourseSelect={handleCourseSelect}
             />
           ) : (
             <div className="h-full flex flex-col">
@@ -524,6 +550,13 @@ export default function Home() {
             onCourseSelect={handleCourseSelect}
             selectedCourseId={selectedCourse?.id}
             mapRef={mapRef}
+            userLocation={userLocation || undefined}
+          />
+
+          {/* Chat Interface */}
+          <ChatInterface
+            onRecommendations={handleChatRecommendations}
+            userLocation={userLocation || undefined}
           />
         </div>
       </div>

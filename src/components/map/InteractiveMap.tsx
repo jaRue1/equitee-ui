@@ -11,9 +11,10 @@ interface InteractiveMapProps {
   onCourseSelect?: (course: Course) => void
   selectedCourseId?: string
   mapRef?: React.MutableRefObject<mapboxgl.Map | null>
+  userLocation?: { lat: number; lng: number }
 }
 
-export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRef }: InteractiveMapProps) {
+export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRef, userLocation }: InteractiveMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -24,6 +25,7 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
   const [mapConfigError, setMapConfigError] = useState<string | null>(null)
   const [heatMapVisible, setHeatMapVisible] = useState(false)
   const [demographicData, setDemographicData] = useState<DemographicData[]>([])
+  const userMarker = useRef<mapboxgl.Marker | null>(null)
 
   // Mock demographic data for South Florida (this would come from API in production)
   const mockDemographicData: DemographicData[] = [
@@ -120,19 +122,79 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
     setHeatMapVisible(prev => !prev)
   }
 
+  // Add user location marker - only when both map and location are ready
+  useEffect(() => {
+    if (!map.current || !userLocation || !mapLoaded) return
+
+    // Remove existing user marker
+    if (userMarker.current) {
+      userMarker.current.remove()
+    }
+
+    // Create custom user location marker element with inline styles
+    const userMarkerElement = document.createElement('div')
+    userMarkerElement.className = 'user-location-marker'
+
+    // Add ping animation CSS if not already added
+    if (!document.getElementById('user-marker-styles')) {
+      const style = document.createElement('style')
+      style.id = 'user-marker-styles'
+      style.textContent = `
+        @keyframes ping {
+          0% { transform: scale(1); opacity: 0.75; }
+          75%, 100% { transform: scale(2); opacity: 0; }
+        }
+      `
+      document.head.appendChild(style)
+    }
+
+    userMarkerElement.innerHTML = `
+      <div style="position: relative;">
+        <!-- Pulsing outer ring -->
+        <div style="position: absolute; width: 32px; height: 32px; background-color: #60a5fa; border-radius: 50%; animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; opacity: 0.75;"></div>
+        <!-- Solid inner circle -->
+        <div style="position: relative; width: 32px; height: 32px; background-color: #2563eb; border-radius: 50%; border: 4px solid white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 12px; height: 12px; background-color: white; border-radius: 50%;"></div>
+        </div>
+        <!-- Label -->
+        <div style="position: absolute; top: 40px; left: 50%; transform: translateX(-50%); background-color: #2563eb; color: white; font-size: 12px; padding: 4px 8px; border-radius: 4px; white-space: nowrap;">
+          You are here
+        </div>
+      </div>
+    `
+    // Create and add user marker
+    userMarker.current = new mapboxgl.Marker(userMarkerElement)
+      .setLngLat([userLocation.lng, userLocation.lat])
+      .addTo(map.current)
+
+    // No need to center map - it already starts at the right position and the slow zoom animation handles it
+
+    return () => {
+      if (userMarker.current) {
+        userMarker.current.remove()
+      }
+    }
+  }, [userLocation, mapLoaded])
+
+  // Removed localStorage logic - no longer needed
+
   useEffect(() => {
     if (!mapContainer.current || !mapConfig) return
 
     // Initialize map with secure config from API
     mapboxgl.accessToken = mapConfig.accessToken
 
+    // Start at zoomed out view over user location if available, otherwise world view
+    const initialCenter: [number, number] = userLocation ? [userLocation.lng, userLocation.lat] : [0, 20]
+    const initialZoom = userLocation ? 2 : 1.5
+
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: mapConfig.style,
-      center: [mapConfig.center.lng, mapConfig.center.lat],
-      zoom: mapConfig.zoom,
-      pitch: mapConfig.pitch,
-      bearing: mapConfig.bearing,
+      center: initialCenter,
+      zoom: initialZoom,
+      pitch: 0,
+      bearing: 0,
       antialias: true // Smooth 3D rendering
     })
 
@@ -151,7 +213,38 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         map.current.remove()
       }
     }
-  }, [mapConfig])
+  }, [mapConfig, userLocation])
+
+  // Simple zoom animation to user location
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !userLocation) return
+
+    console.log('Starting simple zoom to user location...', userLocation)
+
+    // Slowly zoom in to user location (map already starts at zoomed out view)
+    setTimeout(() => {
+      if (map.current) {
+        map.current.easeTo({
+          center: [userLocation.lng, userLocation.lat],
+          zoom: 12,
+          duration: 6000, // 6 seconds slow zoom
+          essential: true,
+          easing: t => t * (2 - t) // Smooth easing
+        })
+
+        // Finally: Add tilt after zoom completes
+        setTimeout(() => {
+          if (map.current) {
+            map.current.easeTo({
+              pitch: 45,
+              duration: 2000,
+              essential: true
+            })
+          }
+        }, 5500)
+      }
+    }, 1000)
+  }, [mapLoaded, userLocation])
 
   // Add course markers when both map and courses are loaded
   useEffect(() => {
@@ -159,6 +252,22 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
       addCourseMarkers()
     }
   }, [mapLoaded, coursesLoading, courses])
+
+  // Handle selected course navigation
+  useEffect(() => {
+    if (selectedCourseId && map.current && courses.length > 0) {
+      const selectedCourse = courses.find(course => course.id === selectedCourseId)
+      if (selectedCourse) {
+        map.current.flyTo({
+          center: [selectedCourse.lng, selectedCourse.lat],
+          zoom: 14,
+          duration: 1500,
+          essential: true
+        })
+      }
+    }
+  }, [selectedCourseId, courses])
+
 
   const add3DBuildings = () => {
     if (!map.current) return

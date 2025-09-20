@@ -23,30 +23,33 @@ export default function HeatMapLayer({ map, demographicData, visible, onToggle }
   useEffect(() => {
     if (!map || !demographicData.length) return
 
-    const sourceId = 'demographic-data'
-    const layerId = 'demographic-layer'
+    const addHeatMapLayers = () => {
+      if (!map.isStyleLoaded()) return
 
-    // Create GeoJSON from demographic data
-    const geojsonData: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features: demographicData.map(data => ({
-        type: 'Feature' as const,
-        properties: {
-          zipCode: data.zipCode,
-          medianIncome: data.medianIncome,
-          accessibilityScore: data.accessibilityScore
-        },
-        geometry: data.bounds
-      }))
-    }
+      const sourceId = 'demographic-data'
+      const layerId = 'demographic-layer'
 
-    // Add source if it doesn't exist
-    if (!map.getSource(sourceId)) {
-      map.addSource(sourceId, {
-        type: 'geojson',
-        data: geojsonData
-      })
-    }
+      // Create GeoJSON from demographic data
+      const geojsonData: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: demographicData.map(data => ({
+          type: 'Feature' as const,
+          properties: {
+            zipCode: data.zipCode,
+            medianIncome: data.medianIncome,
+            accessibilityScore: data.accessibilityScore
+          },
+          geometry: data.bounds
+        }))
+      }
+
+      // Add source if it doesn't exist
+      if (!map.getSource(sourceId)) {
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: geojsonData
+        })
+      }
 
     // Add layer if it doesn't exist
     if (!map.getLayer(layerId) && !layerAddedRef.current) {
@@ -164,6 +167,15 @@ export default function HeatMapLayer({ map, demographicData, visible, onToggle }
     if (map.getLayer(layerId)) {
       map.setPaintProperty(layerId, 'fill-opacity', visible ? 0.6 : 0)
     }
+    }
+
+    // Try to add layers immediately if map is loaded
+    if (map.isStyleLoaded()) {
+      addHeatMapLayers()
+    } else {
+      // Wait for map to load
+      map.on('load', addHeatMapLayers)
+    }
 
     return () => {
       // Cleanup on unmount
@@ -173,6 +185,7 @@ export default function HeatMapLayer({ map, demographicData, visible, onToggle }
           (popups[i] as HTMLElement).remove()
         }
       }
+      map.off('load', addHeatMapLayers)
     }
   }, [map, demographicData, visible])
 

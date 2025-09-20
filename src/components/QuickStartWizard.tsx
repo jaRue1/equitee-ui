@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useGeolocation } from '@/hooks/useGeolocation'
 
 interface QuickProfile {
   name: string
@@ -41,6 +42,7 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
     interests: [],
     goals: []
   })
+  const { requestLocation, loading: locationLoading, error: locationError, position } = useGeolocation()
 
   // Update profile when googleUser changes
   useEffect(() => {
@@ -103,10 +105,10 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all duration-300 scale-100">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden">
         {/* Progress Header */}
-        <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-6">
+        <div className="bg-white border-b border-gray-200 p-4">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center space-x-3">
               {googleUser?.image && (
@@ -117,42 +119,40 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
                 />
               )}
               <div>
-                <h2 className="text-2xl font-bold">Welcome {googleUser?.name?.split(' ')[0] || 'there'}! 🏌️</h2>
-                <p className="text-green-100 text-sm">Complete your golf profile to get started</p>
+                <h2 className="text-lg font-semibold text-gray-900">Welcome {googleUser?.name?.split(' ')[0] || 'there'}</h2>
+                <p className="text-gray-500 text-xs">Quick setup to get started</p>
               </div>
             </div>
             {!forced && (
               <button
                 onClick={onClose}
-                className="text-white hover:text-gray-200 text-xl"
+                className="text-gray-400 hover:text-gray-600 text-xl"
               >
                 ×
               </button>
             )}
           </div>
-          <div className="flex space-x-2">
-            {[1, 2, 3, 4].map((stepNum) => (
+          <div className="mt-3">
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Step {step} of 3</span>
+              <span>{Math.round((step / 3) * 100)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-1">
               <div
-                key={stepNum}
-                className={`flex-1 h-2 rounded-full transition-all duration-300 ${
-                  stepNum <= step ? 'bg-white' : 'bg-white bg-opacity-30'
-                }`}
+                className="bg-green-600 h-1 rounded-full transition-all duration-300"
+                style={{ width: `${(step / 3) * 100}%` }}
               />
-            ))}
+            </div>
           </div>
-          <p className="text-green-100 text-sm mt-2">
-            Step {step} of 4 • Complete your golf profile
-          </p>
         </div>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-6 overflow-y-auto">
           {step === 1 && (
-            <div className="text-center">
-              <div className="text-6xl mb-6">👋</div>
-              <h3 className="text-2xl font-bold mb-4">Let&apos;s complete your profile!</h3>
-              <p className="text-gray-600 mb-6">
-                We&apos;ve pre-filled some details from Google. Let&apos;s add a few more.
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Basic Information</h3>
+              <p className="text-gray-600 text-sm mb-6">
+                We&apos;ve pre-filled some details from Google.
               </p>
 
               <div className="space-y-4 mb-6">
@@ -303,7 +303,16 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
                   Back
                 </button>
                 <button
-                  onClick={nextStep}
+                  onClick={() => {
+                    // Auto-set userType based on age and advance
+                    let userType: 'youth' | 'parent' | 'sponsor' | 'mentor' = 'youth'
+                    if (profile.age === 12) userType = 'youth'
+                    else if (profile.age === 17) userType = 'youth'
+                    else userType = 'parent' // Adults are likely parents looking for their children
+
+                    updateProfile({ userType })
+                    nextStep()
+                  }}
                   disabled={!profile.golfExperience}
                   className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
                 >
@@ -314,124 +323,73 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
           )}
 
           {step === 3 && (
-            <div className="text-center">
-              <div className="text-6xl mb-6">🎯</div>
-              <h3 className="text-2xl font-bold mb-4">What brings you to EquiTee?</h3>
-              <p className="text-gray-600 mb-6">
-                This helps us show you the most relevant opportunities
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Location Access</h3>
+              <p className="text-gray-600 text-sm mb-6">
+                Allow location access to find nearby golf resources
               </p>
 
-              <div className="space-y-4 mb-8">
-                {[
-                  {
-                    id: 'youth',
-                    emoji: '🏌️‍♂️',
-                    title: 'I want to learn golf',
-                    description: 'Find courses, lessons, and equipment'
-                  },
-                  {
-                    id: 'parent',
-                    emoji: '👨‍👩‍👧‍👦',
-                    title: 'I&apos;m finding golf for my child',
-                    description: 'Youth programs and family-friendly courses'
-                  },
-                  {
-                    id: 'sponsor',
-                    emoji: '💝',
-                    title: 'I want to sponsor/donate',
-                    description: 'Support youth golf in the community'
-                  },
-                  {
-                    id: 'mentor',
-                    emoji: '👨‍🏫',
-                    title: 'I want to teach/mentor',
-                    description: 'Share my golf knowledge with others'
-                  }
-                ].map((option) => (
-                  <label key={option.id} className="block">
-                    <input
-                      type="radio"
-                      name="userType"
-                      value={option.id}
-                      onChange={() => updateProfile({ userType: option.id as any })}
-                      className="sr-only"
-                    />
-                    <div className={`border-2 rounded-xl p-6 cursor-pointer transition-all text-left ${
-                      profile.userType === option.id
-                        ? 'border-green-500 bg-green-50'
-                        : 'border-gray-200 hover:border-green-300'
-                    }`}>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-3xl">{option.emoji}</div>
-                        <div>
-                          <div className="font-semibold">{option.title}</div>
-                          <div className="text-gray-600 text-sm">{option.description}</div>
-                        </div>
-                      </div>
+              {position ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center space-x-2 text-green-800">
+                    <span className="text-lg">✓</span>
+                    <span className="font-medium">Location detected!</span>
+                  </div>
+                  <p className="text-green-700 text-sm mt-1">
+                    Ready to find golf courses near you
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 mb-6">
+                  {locationError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <p className="text-red-700 text-sm">{locationError}</p>
                     </div>
-                  </label>
-                ))}
-              </div>
+                  )}
+
+                  <button
+                    onClick={requestLocation}
+                    disabled={locationLoading}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <span>📍</span>
+                    <span>{locationLoading ? 'Requesting...' : 'Allow Location Access'}</span>
+                  </button>
+
+                  <div className="text-center">
+                    <p className="text-gray-500 text-xs">or</p>
+                    <input
+                      type="text"
+                      placeholder="Enter ZIP code"
+                      value={profile.zipCode || ''}
+                      onChange={(e) => updateProfile({ zipCode: e.target.value })}
+                      className="w-32 mt-2 text-center text-sm border border-gray-300 rounded py-2 px-3 focus:border-green-500 focus:outline-none"
+                      maxLength={5}
+                      pattern="[0-9]{5}"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex space-x-3">
                 <button
                   onClick={prevStep}
-                  className="flex-1 border border-gray-300 py-3 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                  className="flex-1 border border-gray-300 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                 >
                   Back
                 </button>
                 <button
-                  onClick={nextStep}
-                  disabled={!profile.userType}
-                  className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
+                  onClick={() => {
+                    // Use position coordinates to generate a fake zip code for now
+                    if (position) {
+                      updateProfile({ zipCode: '33101' }) // Default South Florida zip
+                    }
+                    handleComplete()
+                  }}
+                  disabled={!position && (!profile.zipCode || profile.zipCode.length !== 5)}
+                  className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 transition-colors"
                 >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="text-center">
-              <div className="text-6xl mb-6">📍</div>
-              <h3 className="text-2xl font-bold mb-4">Where are you located?</h3>
-              <p className="text-gray-600 mb-6">
-                We&apos;ll show you the best courses and equipment nearby
-              </p>
-
-              <input
-                type="text"
-                placeholder="Enter your ZIP code"
-                value={profile.zipCode || ''}
-                onChange={(e) => updateProfile({ zipCode: e.target.value })}
-                className="w-full text-center text-xl border-2 border-gray-200 rounded-xl py-4 px-6 focus:border-green-500 focus:outline-none transition-colors mb-6"
-                maxLength={5}
-                pattern="[0-9]{5}"
-              />
-
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <h4 className="font-semibold text-blue-800 mb-2">🎯 What you&apos;ll get:</h4>
-                <ul className="text-blue-700 text-sm space-y-1 text-left">
-                  <li>• Personalized course recommendations</li>
-                  <li>• Free & affordable equipment near you</li>
-                  <li>• Youth programs and beginner classes</li>
-                  <li>• Step-by-step guidance to get started</li>
-                </ul>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={prevStep}
-                  className="flex-1 border border-gray-300 py-3 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleComplete}
-                  disabled={!profile.zipCode || profile.zipCode.length !== 5}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white py-3 rounded-xl font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:shadow-lg transform hover:scale-105 transition-all"
-                >
-                  🚀 Get My Recommendations!
+                  Get Started
                 </button>
               </div>
             </div>
