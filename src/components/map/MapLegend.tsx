@@ -8,12 +8,10 @@ interface MapLegendProps {
 
 export default function MapLegend({ heatMapVisible, onHeatMapToggle, className = '' }: MapLegendProps) {
   const incomeRanges = [
-    { color: '#dc2626', label: '$30k', range: 'Under $30k' },
-    { color: '#f59e0b', label: '$45k', range: '$30k - $45k' },
-    { color: '#eab308', label: '$60k', range: '$45k - $60k' },
-    { color: '#84cc16', label: '$75k', range: '$60k - $75k' },
-    { color: '#22c55e', label: '$100k', range: '$75k - $100k' },
-    { color: '#16a34a', label: '$150k+', range: '$100k+' }
+    { color: '#dc2626', label: 'Under $45k', range: 'Low Income' },
+    { color: '#ea580c', label: '$45k-$65k', range: 'Lower-Mid Income' },
+    { color: '#84cc16', label: '$65k-$85k', range: 'Mid Income' },
+    { color: '#16a34a', label: '$85k+', range: 'High Income' }
   ]
 
   const coursePricing = [
@@ -26,14 +24,15 @@ export default function MapLegend({ heatMapVisible, onHeatMapToggle, className =
     <div className={`bg-white rounded-lg shadow-lg p-3 ${className}`}>
       {/* Compact Horizontal Layout */}
       <div className="flex items-center space-x-4">
-        {/* Heat Map Toggle */}
+        {/* Heat Map Toggle - Now Working */}
         <div className="flex items-center space-x-2">
-          <span className="text-xs font-medium text-gray-700">Heat Map</span>
+          <span className="text-xs font-medium text-gray-700">Income Map</span>
           <button
             onClick={onHeatMapToggle}
             className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
-              heatMapVisible ? 'bg-green-600' : 'bg-gray-300'
+              heatMapVisible ? 'bg-green-600' : 'bg-gray-200'
             }`}
+            title="Toggle income demographic map"
           >
             <span
               className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${
@@ -41,6 +40,7 @@ export default function MapLegend({ heatMapVisible, onHeatMapToggle, className =
               }`}
             />
           </button>
+          <span className="text-xs text-green-600">✓ Real Data</span>
         </div>
 
         {/* Course Pricing - Horizontal Icons */}
@@ -56,16 +56,16 @@ export default function MapLegend({ heatMapVisible, onHeatMapToggle, className =
         </div>
       </div>
 
-      {/* Income Legend - Only show when heat map is active */}
+      {/* Income Legend - Show when heat map is active */}
       {heatMapVisible && (
         <div className="mt-3 pt-3 border-t border-gray-200 animate-in slide-in-from-top-1 duration-200">
           <div className="flex items-center space-x-4">
-            <span className="text-xs text-gray-600">Income:</span>
+            <span className="text-xs text-gray-600">Median Income:</span>
             <div className="flex items-center space-x-3">
-              {incomeRanges.slice(0, 4).map((range, index) => (
+              {incomeRanges.slice(0, 6).map((range, index) => (
                 <div key={index} className="flex items-center space-x-1">
                   <div
-                    className="w-2 h-2 rounded"
+                    className="w-3 h-3 rounded border border-white"
                     style={{ backgroundColor: range.color }}
                   />
                   <span className="text-xs text-gray-700">{range.label}</span>

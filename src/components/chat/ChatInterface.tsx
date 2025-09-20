@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { type Message, type ChatState, type CourseRecommendation } from '@/types/chat'
+import { sendChatMessage, ChatConversation } from '@/lib/api'
 
 interface ChatInterfaceProps {
   onRecommendations?: (recommendations: CourseRecommendation[]) => void
@@ -17,6 +18,9 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
     loading: false,
     mode: 'onboarding'
   })
+  const [chatError, setChatError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+  const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -26,8 +30,43 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
   }
 
   useEffect(() => {
-    scrollToBottom()
+    const timeoutId = setTimeout(scrollToBottom, 100)
+    return () => clearTimeout(timeoutId)
   }, [chatState.messages])
+
+  // Load saved messages from localStorage
+  useEffect(() => {
+    if (chatState.conversationId && chatState.messages.length === 0) {
+      const savedMessages = localStorage.getItem(`equitee-chat-${chatState.conversationId}`)
+      if (savedMessages) {
+        try {
+          const parsedMessages = JSON.parse(savedMessages)
+          if (Array.isArray(parsedMessages) && parsedMessages.length > 0) {
+            setChatState(prev => ({
+              ...prev,
+              messages: parsedMessages
+            }))
+          }
+        } catch (error) {
+          console.error('Failed to load saved messages:', error)
+        }
+      }
+    }
+  }, [chatState.conversationId])
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (chatState.conversationId && chatState.messages.length > 0) {
+      try {
+        localStorage.setItem(
+          `equitee-chat-${chatState.conversationId}`,
+          JSON.stringify(chatState.messages)
+        )
+      } catch (error) {
+        console.error('Failed to save messages:', error)
+      }
+    }
+  }, [chatState.messages, chatState.conversationId])
 
   const toggleChat = () => {
     setChatState(prev => ({
@@ -51,11 +90,11 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
   }
 
   const generateConversationId = () => {
-    return 'conv_' + Math.random().toString(36).substr(2, 9)
+    return 'conv_' + Math.random().toString(36).substring(2, 9)
   }
 
   const generateMessageId = () => {
-    return 'msg_' + Math.random().toString(36).substr(2, 9)
+    return 'msg_' + Math.random().toString(36).substring(2, 9)
   }
 
   const addMessage = (message: Message) => {
@@ -156,7 +195,7 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
     }
   }
 
-  const handleTextSubmit = (e: React.FormEvent) => {
+  const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim()) return
 
@@ -170,16 +209,86 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
 
     const userQuestion = inputValue
     setInputValue('')
+    setChatState(prev => ({ ...prev, loading: true }))
+    setChatError(null)
 
-    // Simulate AI response
-    simulateTyping(() => {
-      addMessage({
-        id: generateMessageId(),
-        type: 'bot',
-        content: `I understand you're asking about "${userQuestion}". In a full implementation, this would connect to an AI system to provide detailed answers about golf courses, equipment, and local programs based on your location.`,
-        timestamp: new Date()
-      })
-    }, 1500)
+    try {
+      // Send message to real AI API
+      const response = await sendChatMessage(
+        currentConversation?.id || null,
+        userQuestion,
+        userLocation
+      )
+
+      // Validate API response structure
+      if (!response || !response.conversation) {
+        throw new Error('Invalid response from server')
+      }
+
+      // Update conversation state
+      setCurrentConversation(response.conversation)
+      setChatState(prev => ({
+        ...prev,
+        conversationId: response.conversation.id,
+        loading: false
+      }))
+
+      // Reset retry count on success
+      setRetryCount(0)
+
+      // Add AI response with validation
+      if (response.aiResponse && response.aiResponse.message) {
+        addMessage({
+          id: generateMessageId(),
+          type: 'bot',
+          content: response.aiResponse.message,
+          timestamp: new Date()
+        })
+
+        // Extract and validate recommendations if available
+        if (response.aiResponse.metadata?.recommendations && Array.isArray(response.aiResponse.metadata.recommendations)) {
+          const validRecommendations = response.aiResponse.metadata.recommendations.filter(rec =>
+            rec && rec.course && rec.course.id && typeof rec.course.lat === 'number' && typeof rec.course.lng === 'number'
+          )
+          if (validRecommendations.length > 0 && onRecommendations) {
+            onRecommendations(validRecommendations)
+          }
+        }
+      } else {
+        // Handle case where AI response is missing or invalid
+        addMessage({
+          id: generateMessageId(),
+          type: 'bot',
+          content: 'I received your message but couldn\'t generate a proper response. Please try rephrasing your question.',
+          timestamp: new Date()
+        })
+      }
+    } catch (error) {
+      console.error('Error sending chat message:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setChatError(errorMessage)
+      setChatState(prev => ({ ...prev, loading: false }))
+
+      // Implement retry logic for network failures
+      if (retryCount < 2 && (errorMessage.includes('network') || errorMessage.includes('fetch'))) {
+        setRetryCount(prev => prev + 1)
+        setTimeout(() => {
+          // Auto-retry after delay
+          setInputValue(userQuestion)
+          setChatError('Retrying...')
+        }, 2000 * (retryCount + 1)) // Exponential backoff
+      } else {
+        // Show user-friendly error message after max retries
+        addMessage({
+          id: generateMessageId(),
+          type: 'bot',
+          content: retryCount >= 2
+            ? 'I\'m having persistent connection issues. Please check your internet connection and try again later.'
+            : 'Sorry, I\'m having trouble connecting right now. Please try again in a moment.',
+          timestamp: new Date()
+        })
+      }
+    }
   }
 
   const toggleMode = () => {
@@ -196,6 +305,32 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
         : 'Switched to onboarding mode. Let me help guide you step by step.',
       timestamp: new Date()
     })
+  }
+
+  const clearConversation = () => {
+    const oldConversationId = chatState.conversationId
+    setChatState(prev => ({
+      ...prev,
+      messages: [],
+      conversationId: generateConversationId(),
+      mode: 'onboarding',
+      loading: false
+    }))
+    setCurrentConversation(null)
+    setChatError(null)
+    setRetryCount(0)
+
+    // Clear localStorage
+    if (oldConversationId) {
+      localStorage.removeItem(`equitee-chat-${oldConversationId}`)
+    }
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent, option: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleOptionClick(option)
+    }
   }
 
   return (
@@ -221,6 +356,13 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
             </div>
             <div className="flex items-center space-x-2">
               <button
+                onClick={clearConversation}
+                className="text-xs bg-white px-2 py-1 rounded text-gray-600 hover:bg-gray-50"
+                title="Clear conversation"
+              >
+                🗑️
+              </button>
+              <button
                 onClick={toggleMode}
                 className="text-xs bg-white px-2 py-1 rounded text-gray-600 hover:bg-gray-50"
                 title="Toggle chat mode"
@@ -230,11 +372,30 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
               <button
                 onClick={toggleChat}
                 className="text-gray-400 hover:text-gray-600"
+                title="Close chat"
               >
                 ✕
               </button>
             </div>
           </div>
+
+          {/* Error Display */}
+          {chatError && (
+            <div className="px-4 py-2 bg-red-50 border-b border-red-200">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-red-600">
+                  {chatError}
+                </p>
+                <button
+                  onClick={() => setChatError(null)}
+                  className="text-red-400 hover:text-red-600 text-xs"
+                  title="Dismiss error"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -257,7 +418,11 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
                         <button
                           key={index}
                           onClick={() => handleOptionClick(option)}
-                          className="block w-full text-left text-xs bg-white text-gray-700 px-2 py-1 rounded hover:bg-gray-50 transition-colors"
+                          onKeyDown={(e) => handleKeyDown(e, option)}
+                          className="block w-full text-left text-xs bg-white text-gray-700 px-2 py-1 rounded hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:outline-none transition-colors"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Select option: ${option}`}
                         >
                           {option}
                         </button>

@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { fetchCourses, fetchMapConfig, Course, MapConfig } from '@/lib/api'
-import HeatMapLayer, { type DemographicData } from './HeatMapLayer'
+import { fetchCourses, fetchMapConfig, fetchDemographics, fetchMentors, fetchYouthPrograms, testAPIConnection, Course, MapConfig, Demographic, Mentor, YouthProgram } from '@/lib/api'
+// HeatMapLayer removed - using real zip code boundaries instead
 import MapLegend from './MapLegend'
 
 interface FilterState {
@@ -31,58 +31,68 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
   const [coursesError, setCoursesError] = useState<string | null>(null)
   const [mapConfig, setMapConfig] = useState<MapConfig | null>(null)
   const [mapConfigError, setMapConfigError] = useState<string | null>(null)
-  const [heatMapVisible, setHeatMapVisible] = useState(false)
-  const [demographicData, setDemographicData] = useState<DemographicData[]>([])
+  const [heatMapVisible, setHeatMapVisible] = useState(true) // Start with zip codes visible
   const userMarker = useRef<mapboxgl.Marker | null>(null)
 
-  // Mock demographic data for South Florida (this would come from API in production)
-  const mockDemographicData: DemographicData[] = [
-    {
-      zipCode: '33101',
-      medianIncome: 85000,
-      accessibilityScore: 85,
-      bounds: {
-        type: 'Polygon',
-        coordinates: [[
-          [-80.1918, 25.7617],
-          [-80.1768, 25.7617],
-          [-80.1768, 25.7767],
-          [-80.1918, 25.7767],
-          [-80.1918, 25.7617]
-        ]]
-      }
-    },
-    {
-      zipCode: '33134',
-      medianIncome: 65000,
-      accessibilityScore: 72,
-      bounds: {
-        type: 'Polygon',
-        coordinates: [[
-          [-80.2418, 25.7417],
-          [-80.2268, 25.7417],
-          [-80.2268, 25.7567],
-          [-80.2418, 25.7567],
-          [-80.2418, 25.7417]
-        ]]
-      }
-    },
-    {
-      zipCode: '33143',
-      medianIncome: 45000,
-      accessibilityScore: 58,
-      bounds: {
-        type: 'Polygon',
-        coordinates: [[
-          [-80.3118, 25.7017],
-          [-80.2968, 25.7017],
-          [-80.2968, 25.7167],
-          [-80.3118, 25.7167],
-          [-80.3118, 25.7017]
-        ]]
-      }
+  // Tooltip state for hover information
+  const [tooltip, setTooltip] = useState<{
+    visible: boolean
+    x: number
+    y: number
+    zipCode: string
+    income: number
+    recommendations: string[]
+  } | null>(null)
+
+  // Load real demographic data from API
+  const [realDemographics, setRealDemographics] = useState<Demographic[]>([])
+  const [demographicsLoading, setDemographicsLoading] = useState(true)
+  const [demographicsError, setDemographicsError] = useState<string | null>(null)
+  const [mentors, setMentors] = useState<Mentor[]>([])
+  const [youthPrograms, setYouthPrograms] = useState<YouthProgram[]>([])
+  const [mentorsLoading, setMentorsLoading] = useState(true)
+  const [youthProgramsLoading, setYouthProgramsLoading] = useState(true)
+
+  // Helper function to get income color with more dramatic contrasts
+  const getIncomeColor = (medianIncome: number): string => {
+    if (medianIncome < 45000) return '#dc2626' // Red - Under $45k (low income)
+    if (medianIncome < 65000) return '#ea580c' // Orange - $45k-$65k (lower-mid income)
+    if (medianIncome < 85000) return '#84cc16' // Light green - $65k-$85k (mid income)
+    return '#16a34a' // Dark green - $85k+ (high income)
+  }
+
+  // Get course recommendations based on income level
+  const getCourseRecommendations = (medianIncome: number): string[] => {
+    if (medianIncome < 45000) {
+      return [
+        'Public courses ($20-40)',
+        'Municipal golf courses',
+        'Beginner-friendly options',
+        'Group lesson packages'
+      ]
+    } else if (medianIncome < 65000) {
+      return [
+        'Semi-private courses ($40-70)',
+        'Weekend specials',
+        'Local club memberships',
+        'Intermediate courses'
+      ]
+    } else if (medianIncome < 85000) {
+      return [
+        'Private club day passes ($70-120)',
+        'Premium public courses',
+        'Golf lesson packages',
+        'Tournament-quality courses'
+      ]
+    } else {
+      return [
+        'Exclusive private clubs ($120+)',
+        'Championship courses',
+        'Premium instruction',
+        'Luxury golf experiences'
+      ]
     }
-  ]
+  }
 
   // Load map config from API
   useEffect(() => {
@@ -121,14 +131,328 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
     loadCourses()
   }, [])
 
-  // Load demographic data (mock data for now)
+  // Test API connection and load real demographic data
   useEffect(() => {
-    setDemographicData(mockDemographicData)
+    async function loadDemographics() {
+      try {
+        setDemographicsLoading(true)
+        setDemographicsError(null)
+
+        // Debug: Test API connection
+        console.log('🔍 Testing API endpoints...')
+        const apiTest = await testAPIConnection()
+        console.log('📍 API Base URL:', apiTest.baseUrl)
+        console.log('✅ Working endpoints:', apiTest.workingEndpoints)
+        console.log('❌ Failed endpoints:', apiTest.failedEndpoints)
+
+        const demographics = await fetchDemographics()
+        setRealDemographics(demographics)
+
+        // Log successful data load with better validation
+        console.log('✅ Real demographics loaded successfully!')
+        console.log('📊 Sample data:', demographics.slice(0, 5))
+
+        // Calculate income range with validation
+        const validIncomes = demographics
+          .filter(d => d && typeof d.medianIncome === 'number' && !isNaN(d.medianIncome))
+          .map(d => d.medianIncome)
+
+        if (validIncomes.length > 0) {
+          console.log('💰 Income range:',
+            `$${Math.min(...validIncomes).toLocaleString()} - $${Math.max(...validIncomes).toLocaleString()}`
+          )
+        } else {
+          console.warn('⚠️ No valid income data found in demographics')
+        }
+
+        // Zip code boundaries will be loaded separately
+      } catch (error) {
+        console.error('Error loading demographics:', error)
+        setDemographicsError(error instanceof Error ? error.message : 'Failed to load demographics')
+      } finally {
+        setDemographicsLoading(false)
+      }
+    }
+
+    loadDemographics()
   }, [])
+
+  // Load mentors and youth programs
+  useEffect(() => {
+    async function loadMentorsAndPrograms() {
+      try {
+        setMentorsLoading(true)
+        setYouthProgramsLoading(true)
+
+        const [mentorsData, youthProgramsData] = await Promise.all([
+          fetchMentors(userLocation),
+          fetchYouthPrograms(userLocation)
+        ])
+
+        setMentors(mentorsData)
+        setYouthPrograms(youthProgramsData)
+      } catch (error) {
+        console.error('Error loading mentors/youth programs:', error)
+      } finally {
+        setMentorsLoading(false)
+        setYouthProgramsLoading(false)
+      }
+    }
+
+    loadMentorsAndPrograms()
+  }, [userLocation])
+
+  // Load zip code boundaries and apply demographic colors
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !realDemographics.length) return
+
+    const loadZipCodeBoundaries = async () => {
+      try {
+        console.log('🗺️ Loading zip code boundaries...')
+
+        // Load the filtered GeoJSON with only our database zip codes
+        const response = await fetch('/equitee-zipcodes.geojson')
+        if (!response.ok) {
+          throw new Error(`Failed to load zip codes: ${response.status}`)
+        }
+
+        const geoData = await response.json()
+        console.log(`✅ Loaded ${geoData.features.length} zip code boundaries`)
+
+        // Debug: Check what zip codes are in the GeoJSON
+        const geoZipCodes = geoData.features.map((f: any) => f.properties.ZCTA5CE10).slice(0, 10)
+        console.log('🗺️ First 10 GeoJSON zip codes:', geoZipCodes)
+
+        // Debug: Check what zip codes are in demographics
+        console.log('📊 Raw demographics data:', realDemographics.slice(0, 3))
+        console.log('📊 Demographics data type check:', realDemographics[0])
+
+        const demoZipCodes = realDemographics.map(d => d?.zipCode || 'undefined').slice(0, 10)
+        console.log('📊 First 10 demographics zip codes:', demoZipCodes)
+
+        // Cross-check: which GeoJSON zip codes have demographic data
+        const matchingZips = geoZipCodes.filter((geoZip: string) =>
+          realDemographics.some(demo => demo?.zipCode === geoZip)
+        )
+        console.log(`🔍 ${matchingZips.length} out of ${geoZipCodes.length} GeoJSON zip codes have demographic data`)
+        console.log('🔍 Matching zips:', matchingZips)
+
+        // Check if source already exists and remove it
+        if (map.current!.getSource('zip-boundaries')) {
+          console.log('🔄 Removing existing zip-boundaries source')
+          if (map.current!.getLayer('zip-fill')) map.current!.removeLayer('zip-fill')
+          if (map.current!.getLayer('zip-hover')) map.current!.removeLayer('zip-hover')
+          if (map.current!.getLayer('zip-stroke')) map.current!.removeLayer('zip-stroke')
+          map.current!.removeSource('zip-boundaries')
+        }
+
+        // Add GeoJSON source
+        map.current!.addSource('zip-boundaries', {
+          type: 'geojson',
+          data: geoData
+        })
+
+        // Create a lookup map for colors instead of complex expression
+        const zipColorMap: { [key: string]: string } = {}
+
+        // Add validation and create color mapping
+        const validDemographics = realDemographics.filter(demo =>
+          demo && demo.zipCode && typeof demo.medianIncome === 'number' && !isNaN(demo.medianIncome)
+        )
+
+        console.log(`🔍 Filtered ${validDemographics.length} valid demographics from ${realDemographics.length} total`)
+
+        if (validDemographics.length === 0) {
+          console.warn('⚠️ No valid demographic data found! Using fallback colors.')
+        }
+
+        validDemographics.forEach(demo => {
+          const color = getIncomeColor(demo.medianIncome)
+          zipColorMap[demo.zipCode] = color
+          console.log(`🎨 Mapping ${demo.zipCode} (income: $${demo.medianIncome.toLocaleString()}) → ${color}`)
+        })
+
+        console.log('🎨 Created color map for', validDemographics.length, 'valid demographics')
+
+        // Create simple case-based color expression with proper structure
+        let colorExpression: any
+
+        if (validDemographics.length > 0) {
+          colorExpression = ['case']
+
+          // Add each zip code mapping as individual case
+          validDemographics.forEach(demo => {
+            colorExpression.push(['==', ['get', 'ZCTA5CE10'], demo.zipCode])
+            colorExpression.push(zipColorMap[demo.zipCode])
+          })
+
+          // Default color for unmapped zip codes
+          colorExpression.push('#e5e7eb')
+        } else {
+          // Fallback to simple color if no data
+          colorExpression = '#22c55e'
+        }
+
+        console.log('📋 Color expression type:', Array.isArray(colorExpression) ? 'array' : 'string')
+        console.log('📋 Color expression length:', Array.isArray(colorExpression) ? colorExpression.length : 'N/A')
+
+        // Add fill layer with demographic-based colors
+        try {
+          map.current!.addLayer({
+            id: 'zip-fill',
+            type: 'fill',
+            source: 'zip-boundaries',
+            paint: {
+              'fill-color': colorExpression,
+              'fill-opacity': 0.6
+            },
+            layout: {
+              'visibility': heatMapVisible ? 'visible' : 'none'
+            }
+          })
+          console.log('✅ Successfully added zip-fill layer')
+        } catch (error) {
+          console.error('❌ Error adding zip-fill layer:', error)
+          console.log('🔍 Color expression that failed:', colorExpression)
+
+          // Fallback: Add layer with simple color
+          map.current!.addLayer({
+            id: 'zip-fill',
+            type: 'fill',
+            source: 'zip-boundaries',
+            paint: {
+              'fill-color': '#22c55e', // Simple green color as fallback
+              'fill-opacity': 0.6
+            },
+            layout: {
+              'visibility': heatMapVisible ? 'visible' : 'none'
+            }
+          })
+          console.log('✅ Added fallback zip-fill layer with simple color')
+        }
+
+        // Add hover layer
+        map.current!.addLayer({
+          id: 'zip-hover',
+          type: 'fill',
+          source: 'zip-boundaries',
+          paint: {
+            'fill-color': '#2563eb', // Blue hover color
+            'fill-opacity': 0.7
+          },
+          filter: ['==', 'ZCTA5CE10', ''],
+          layout: {
+            'visibility': heatMapVisible ? 'visible' : 'none'
+          }
+        })
+
+        // Add stroke/border layer
+        map.current!.addLayer({
+          id: 'zip-stroke',
+          type: 'line',
+          source: 'zip-boundaries',
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 1,
+            'line-opacity': 0.8
+          },
+          layout: {
+            'visibility': heatMapVisible ? 'visible' : 'none'
+          }
+        })
+
+        console.log('✅ Zip code boundaries added to map with demographic colors')
+
+      } catch (error) {
+        console.error('❌ Error loading zip code boundaries:', error)
+      }
+    }
+
+    loadZipCodeBoundaries()
+  }, [mapLoaded, realDemographics, heatMapVisible])
+
+  // Add hover interactions for zip code boundaries
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !realDemographics.length) return
+
+    const handleMouseMove = (e: mapboxgl.MapMouseEvent) => {
+      if (e.features && e.features.length > 0) {
+        const feature = e.features[0]
+        const zipCode = feature.properties?.ZCTA5CE10
+        const demo = realDemographics.find(d => d.zipCode === zipCode)
+
+        // Update hover filter
+        map.current!.setFilter('zip-hover', ['==', 'ZCTA5CE10', zipCode])
+
+        // Update cursor
+        map.current!.getCanvas().style.cursor = 'pointer'
+
+        // Show tooltip with demographic info and recommendations
+        if (demo) {
+          const recommendations = getCourseRecommendations(demo.medianIncome)
+          setTooltip({
+            visible: true,
+            x: e.point.x,
+            y: e.point.y,
+            zipCode: zipCode,
+            income: demo.medianIncome,
+            recommendations: recommendations
+          })
+          console.log(`🎯 Hover: ${zipCode} | Income: $${demo.medianIncome.toLocaleString()} | Color: ${getIncomeColor(demo.medianIncome)}`)
+        } else {
+          setTooltip({
+            visible: true,
+            x: e.point.x,
+            y: e.point.y,
+            zipCode: zipCode,
+            income: 0,
+            recommendations: ['No demographic data available']
+          })
+          console.log(`🎯 Hover: ${zipCode} | No demographic data`)
+        }
+      }
+    }
+
+    const handleMouseLeave = () => {
+      map.current!.setFilter('zip-hover', ['==', 'ZCTA5CE10', ''])
+      map.current!.getCanvas().style.cursor = ''
+      setTooltip(null) // Hide tooltip
+    }
+
+    map.current.on('mousemove', 'zip-fill', handleMouseMove)
+    map.current.on('mouseleave', 'zip-fill', handleMouseLeave)
+
+    return () => {
+      map.current?.off('mousemove', 'zip-fill', handleMouseMove)
+      map.current?.off('mouseleave', 'zip-fill', handleMouseLeave)
+    }
+  }, [mapLoaded, realDemographics])
 
   const handleHeatMapToggle = () => {
     setHeatMapVisible(prev => !prev)
   }
+
+  // Update zip code layer visibility when heatMapVisible changes
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    const visibility = heatMapVisible ? 'visible' : 'none'
+
+    try {
+      // Check if layers exist before trying to update them
+      if (map.current.getLayer('zip-fill')) {
+        map.current.setLayoutProperty('zip-fill', 'visibility', visibility)
+      }
+      if (map.current.getLayer('zip-hover')) {
+        map.current.setLayoutProperty('zip-hover', 'visibility', visibility)
+      }
+      if (map.current.getLayer('zip-stroke')) {
+        map.current.setLayoutProperty('zip-stroke', 'visibility', visibility)
+      }
+    } catch (error) {
+      console.warn('Error updating layer visibility:', error)
+    }
+  }, [heatMapVisible, mapLoaded])
 
   // Add user location marker - only when both map and location are ready
   useEffect(() => {
@@ -510,13 +834,7 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         </div>
       )}
 
-      {/* Heat Map Layer */}
-      <HeatMapLayer
-        map={map.current}
-        demographicData={demographicData}
-        visible={heatMapVisible}
-        onToggle={handleHeatMapToggle}
-      />
+      {/* Zip code boundaries are now handled directly in the map */}
 
       {/* Map Legend - Top Left */}
       <MapLegend
@@ -524,6 +842,64 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         onHeatMapToggle={handleHeatMapToggle}
         className="absolute top-4 left-4"
       />
+
+      {/* Hover Tooltip for Zip Code Demographics */}
+      {tooltip && tooltip.visible && (
+        <div
+          className="absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4 pointer-events-none z-50 min-w-[280px] animate-in fade-in-0 duration-200"
+          style={{
+            left: tooltip.x + 10,
+            top: tooltip.y - 10,
+            transform: 'translateY(-100%)'
+          }}
+        >
+          <div className="space-y-3">
+            {/* Zip Code Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Zip Code {tooltip.zipCode}</h3>
+              <div
+                className="w-4 h-4 rounded-full border border-white"
+                style={{ backgroundColor: getIncomeColor(tooltip.income) }}
+              />
+            </div>
+
+            {/* Income Information */}
+            {tooltip.income > 0 ? (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Median Income:</span>
+                  <span className="font-semibold text-green-600">
+                    ${tooltip.income.toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Income Category */}
+                <div className="text-xs text-gray-500">
+                  {tooltip.income < 45000 && "Low Income Area"}
+                  {tooltip.income >= 45000 && tooltip.income < 65000 && "Lower-Mid Income Area"}
+                  {tooltip.income >= 65000 && tooltip.income < 85000 && "Mid Income Area"}
+                  {tooltip.income >= 85000 && "High Income Area"}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">No demographic data available</div>
+            )}
+
+            {/* Course Recommendations */}
+            <div className="border-t border-gray-200 pt-3">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Recommended Golf Options:</h4>
+              <ul className="space-y-1">
+                {tooltip.recommendations.map((rec, index) => (
+                  <li key={index} className="text-xs text-gray-600 flex items-start">
+                    <span className="text-green-500 mr-2">•</span>
+                    {rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
