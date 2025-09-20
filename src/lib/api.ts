@@ -154,8 +154,8 @@ function transformEquipment(apiEquipment: ApiEquipment): Equipment {
     price: apiEquipment.price || 0,
     images: apiEquipment.images || [],
     status: apiEquipment.status,
-    userName: `User ${apiEquipment.user_id.slice(0, 8)}`, // Temporary - we'll need to fetch user names
-    userId: apiEquipment.user_id,
+    userName: apiEquipment.user_id ? `User ${apiEquipment.user_id.slice(0, 8)}` : 'Anonymous', // Handle null user_id
+    userId: apiEquipment.user_id || 'anonymous',
     locationLat: apiEquipment.location_lat,
     locationLng: apiEquipment.location_lng,
     distance: '0.0 miles' // Temporary - we'll calculate this client-side
@@ -318,6 +318,13 @@ interface ApiMentor {
   location_radius: number
   contact_info: Record<string, any>
   created_at: string
+  user?: {
+    name: string
+    email: string
+    location_lat: number
+    location_lng: number
+  }
+  distance_miles?: number
 }
 
 export interface Mentor {
@@ -334,6 +341,7 @@ export interface Mentor {
   userName?: string
   userEmail?: string
   userLocation?: { lat: number; lng: number }
+  distanceMiles?: number
 }
 
 // Youth Programs
@@ -361,11 +369,11 @@ export interface YouthProgram {
   organization: string
   locationLat: number
   locationLng: number
-  address: string
+  address?: string
   ageMin: number
   ageMax: number
   costPerSession: number
-  scheduleDays: string[]
+  scheduleDays?: string[]
   description: string
   equipmentProvided: boolean
   transportationAvailable: boolean
@@ -463,7 +471,11 @@ function transformMentor(api: ApiMentor): Mentor {
     specialties: api.specialties,
     certifications: api.certifications,
     locationRadius: api.location_radius,
-    contactInfo: api.contact_info
+    contactInfo: api.contact_info,
+    userName: api.user?.name,
+    userEmail: api.user?.email,
+    userLocation: api.user ? { lat: api.user.location_lat, lng: api.user.location_lng } : undefined,
+    distanceMiles: api.distance_miles
   }
 }
 
@@ -472,17 +484,17 @@ function transformYouthProgram(api: ApiYouthProgram): YouthProgram {
     id: api.id,
     name: api.name,
     organization: api.organization,
-    locationLat: api.location_lat,
-    locationLng: api.location_lng,
+    locationLat: api.location_lat || 0,
+    locationLng: api.location_lng || 0,
     address: api.address,
-    ageMin: api.age_min,
-    ageMax: api.age_max,
-    costPerSession: api.cost_per_session,
-    scheduleDays: api.schedule_days,
-    description: api.description,
-    equipmentProvided: api.equipment_provided,
-    transportationAvailable: api.transportation_available,
-    contactInfo: api.contact_info
+    ageMin: api.age_min || 5,
+    ageMax: api.age_max || 18,
+    costPerSession: api.cost_per_session || 0,
+    scheduleDays: api.schedule_days || [],
+    description: api.description || '',
+    equipmentProvided: api.equipment_provided || false,
+    transportationAvailable: api.transportation_available || false,
+    contactInfo: api.contact_info || {}
   }
 }
 
@@ -774,20 +786,23 @@ export async function sendChatMessage(
       // Transform the response to match expected structure
       const conversation: ChatConversation = {
         id: result.conversationId,
-        user_id: 'current-user', // We'll need to get this from session
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        title: 'Golf Consultation',
-        metadata: { mode: result.mode }
+        userId: 'current-user', // We'll need to get this from session
+        conversationState: {},
+        currentStep: result.mode || 'chat',
+        userLocation: userLocation || {},
+        mode: result.mode || 'chat',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
 
       const welcomeMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
-        conversation_id: result.conversationId,
-        content: result.message,
-        role: 'assistant',
-        created_at: new Date().toISOString(),
-        metadata: result.options ? { options: result.options } : undefined
+        conversationId: result.conversationId,
+        sender: 'assistant',
+        message: result.message,
+        messageType: 'text',
+        metadata: result.options ? { options: result.options } : {},
+        createdAt: new Date().toISOString()
       }
 
       // For new conversations, we need to send the first user message
@@ -806,11 +821,12 @@ export async function sendChatMessage(
           const messageResult = await messageResponse.json()
           const aiResponse: ChatMessage = {
             id: `msg_${Date.now() + 1}`,
-            conversation_id: result.conversationId,
-            content: messageResult.message,
-            role: 'assistant',
-            created_at: new Date().toISOString(),
-            metadata: messageResult.recommendations ? { recommendations: messageResult.recommendations } : undefined
+            conversationId: result.conversationId,
+            sender: 'assistant',
+            message: messageResult.message,
+            messageType: 'text',
+            metadata: messageResult.recommendations ? { recommendations: messageResult.recommendations } : {},
+            createdAt: new Date().toISOString()
           }
 
           return {
@@ -850,28 +866,33 @@ export async function sendChatMessage(
       // Transform the response to match expected structure
       const conversation: ChatConversation = {
         id: conversationId,
-        user_id: 'current-user',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        title: 'Golf Consultation',
-        metadata: {}
+        userId: 'current-user',
+        conversationState: {},
+        currentStep: 'chat',
+        userLocation: userLocation || {},
+        mode: 'chat',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
 
       const userMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
-        conversation_id: conversationId,
-        content: message,
-        role: 'user',
-        created_at: new Date().toISOString()
+        conversationId: conversationId,
+        sender: 'user',
+        message: message,
+        messageType: 'text',
+        metadata: {},
+        createdAt: new Date().toISOString()
       }
 
       const aiResponse: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
-        conversation_id: conversationId,
-        content: result.message,
-        role: 'assistant',
-        created_at: new Date().toISOString(),
-        metadata: result.options ? { options: result.options } : undefined
+        conversationId: conversationId,
+        sender: 'assistant',
+        message: result.message,
+        messageType: 'text',
+        metadata: result.options ? { options: result.options } : {},
+        createdAt: new Date().toISOString()
       }
 
       return {
