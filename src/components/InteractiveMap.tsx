@@ -3,71 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-
-// Sample course data - in real app this would come from API
-const sampleCourses = [
-  {
-    id: '1',
-    name: 'Doral Golf Resort',
-    address: '4400 NW 87th Ave, Doral, FL',
-    lat: 25.8156,
-    lng: -80.3348,
-    greenFeeMin: 45,
-    greenFeeMax: 85,
-    youthPrograms: true,
-    difficultyRating: 3.5,
-    equipmentRental: true
-  },
-  {
-    id: '2',
-    name: 'Crandon Golf Course',
-    address: '6700 Crandon Blvd, Key Biscayne, FL',
-    lat: 25.7085,
-    lng: -80.1617,
-    greenFeeMin: 35,
-    greenFeeMax: 65,
-    youthPrograms: true,
-    difficultyRating: 2.8,
-    equipmentRental: true
-  },
-  {
-    id: '3',
-    name: 'Fontainebleau Golf Course',
-    address: '9603 Fontainebleau Blvd, Miami, FL',
-    lat: 25.7753,
-    lng: -80.3267,
-    greenFeeMin: 25,
-    greenFeeMax: 45,
-    youthPrograms: false,
-    difficultyRating: 2.5,
-    equipmentRental: false
-  },
-  {
-    id: '4',
-    name: 'Palmetto Golf Course',
-    address: '9300 SW 152nd St, Miami, FL',
-    lat: 25.6789,
-    lng: -80.3456,
-    greenFeeMin: 30,
-    greenFeeMax: 50,
-    youthPrograms: true,
-    difficultyRating: 3.0,
-    equipmentRental: true
-  }
-]
-
-interface Course {
-  id: string
-  name: string
-  address: string
-  lat: number
-  lng: number
-  greenFeeMin: number
-  greenFeeMax: number
-  youthPrograms: boolean
-  difficultyRating: number
-  equipmentRental: boolean
-}
+import { fetchCourses, fetchMapConfig, Course, MapConfig } from '@/lib/api'
 
 interface InteractiveMapProps {
   onCourseSelect?: (course: Course) => void
@@ -79,27 +15,68 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [coursesLoading, setCoursesLoading] = useState(true)
+  const [coursesError, setCoursesError] = useState<string | null>(null)
+  const [mapConfig, setMapConfig] = useState<MapConfig | null>(null)
+  const [mapConfigError, setMapConfigError] = useState<string | null>(null)
+
+  // Load map config from API
+  useEffect(() => {
+    async function loadMapConfig() {
+      try {
+        setMapConfigError(null)
+        const config = await fetchMapConfig()
+        setMapConfig(config)
+      } catch (error) {
+        console.error('Failed to load map config:', error)
+        setMapConfigError('Failed to load map configuration. Please try again.')
+      }
+    }
+
+    loadMapConfig()
+  }, [])
+
+  // Load courses from API
+  useEffect(() => {
+    async function loadCourses() {
+      try {
+        setCoursesLoading(true)
+        setCoursesError(null)
+        const coursesData = await fetchCourses()
+        setCourses(coursesData)
+      } catch (error) {
+        console.error('Failed to load courses:', error)
+        setCoursesError('Failed to load courses. Please try again.')
+        // Fall back to empty array for now
+        setCourses([])
+      } finally {
+        setCoursesLoading(false)
+      }
+    }
+
+    loadCourses()
+  }, [])
 
   useEffect(() => {
-    if (!mapContainer.current) return
+    if (!mapContainer.current || !mapConfig) return
 
-    // Initialize map
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ''
+    // Initialize map with secure config from API
+    mapboxgl.accessToken = mapConfig.accessToken
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12', // 3D satellite view
-      center: [-80.2911, 25.7617], // Miami center
-      zoom: 10,
-      pitch: 45, // 3D tilt
-      bearing: 0,
+      style: mapConfig.style,
+      center: [mapConfig.center.lng, mapConfig.center.lat],
+      zoom: mapConfig.zoom,
+      pitch: mapConfig.pitch,
+      bearing: mapConfig.bearing,
       antialias: true // Smooth 3D rendering
     })
 
     map.current.on('load', () => {
       setMapLoaded(true)
       add3DBuildings()
-      addCourseMarkers()
     })
 
     // Share map reference with parent component
@@ -112,7 +89,14 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         map.current.remove()
       }
     }
-  }, [])
+  }, [mapConfig])
+
+  // Add course markers when both map and courses are loaded
+  useEffect(() => {
+    if (mapLoaded && !coursesLoading && courses.length > 0) {
+      addCourseMarkers()
+    }
+  }, [mapLoaded, coursesLoading, courses])
 
   const add3DBuildings = () => {
     if (!map.current) return
@@ -153,6 +137,14 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
   const addCourseMarkers = () => {
     if (!map.current) return
 
+    // Remove existing markers and sources first
+    const existingMarkers = document.querySelectorAll('.course-marker')
+    existingMarkers.forEach(marker => marker.remove())
+
+    if (map.current.getSource('courses')) {
+      map.current.removeSource('courses')
+    }
+
     // Store all markers to ensure only one can be active at a time
     const allMarkers: { marker: mapboxgl.Marker; popup: mapboxgl.Popup; element: HTMLElement; course: Course }[] = []
 
@@ -168,8 +160,8 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
     }
 
     // Add course markers
-    if (Array.isArray(sampleCourses)) {
-      sampleCourses.forEach((course) => {
+    if (Array.isArray(courses)) {
+      courses.forEach((course) => {
       // Create custom marker element
       const markerElement = document.createElement('div')
       markerElement.className = 'course-marker'
@@ -253,19 +245,19 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
 
     // Global function for popup button clicks
     (window as any).selectCourse = (courseId: string) => {
-      const course = Array.isArray(sampleCourses) ? sampleCourses.find(c => c.id === courseId) : null
+      const course = Array.isArray(courses) ? courses.find(c => c.id === courseId) : null
       if (course && onCourseSelect) {
         onCourseSelect(course)
       }
     }
 
     // Add source and layer for clustering if needed
-    if (Array.isArray(sampleCourses)) {
+    if (Array.isArray(courses)) {
       map.current!.addSource('courses', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
-          features: sampleCourses.map(course => ({
+          features: courses.map(course => ({
             type: 'Feature',
             properties: course,
             geometry: {
@@ -285,12 +277,21 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full rounded-lg" />
 
-      {!mapLoaded && (
+      {(!mapLoaded || coursesLoading || !mapConfig) && (
         <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading map...</p>
+            <p className="text-gray-600">
+              {!mapConfig ? 'Loading map configuration...' :
+               !mapLoaded ? 'Initializing map...' : 'Loading courses...'}
+            </p>
           </div>
+        </div>
+      )}
+
+      {(coursesError || mapConfigError) && (
+        <div className="absolute top-4 left-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+          <p className="text-sm">{coursesError || mapConfigError}</p>
         </div>
       )}
 

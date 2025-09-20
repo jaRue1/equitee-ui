@@ -1,120 +1,61 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import EquipmentCard from '@/components/EquipmentCard'
-
-interface Equipment {
-  id: string
-  title: string
-  description: string
-  equipmentType: 'driver' | 'woods' | 'irons' | 'wedges' | 'putter' | 'bag'
-  condition: 'new' | 'excellent' | 'good' | 'fair'
-  ageRange: string
-  price: number
-  images: string[]
-  status: 'available' | 'pending' | 'donated' | 'sold'
-  distance?: string
-  userName: string
-}
-
-// Sample equipment data
-const sampleEquipment: Equipment[] = [
-  {
-    id: '1',
-    title: 'Junior Golf Set - Complete Starter Kit',
-    description: 'Perfect starter set for young golfers. Includes driver, 7-iron, wedge, putter, and bag.',
-    equipmentType: 'bag',
-    condition: 'good',
-    ageRange: '8-12 years',
-    price: 75,
-    images: [],
-    status: 'available',
-    distance: '2.3 miles',
-    userName: 'Maria Rodriguez'
-  },
-  {
-    id: '2',
-    title: 'Callaway Big Bertha Driver',
-    description: 'Excellent condition driver, great for intermediate players. Only used for one season.',
-    equipmentType: 'driver',
-    condition: 'excellent',
-    ageRange: 'Teen/Adult',
-    price: 120,
-    images: [],
-    status: 'available',
-    distance: '1.8 miles',
-    userName: 'Coach Johnson'
-  },
-  {
-    id: '3',
-    title: 'Youth Putter - TaylorMade',
-    description: 'Free youth putter for beginners. Perfect size for kids learning to putt.',
-    equipmentType: 'putter',
-    condition: 'good',
-    ageRange: '6-10 years',
-    price: 0,
-    images: [],
-    status: 'available',
-    distance: '0.9 miles',
-    userName: 'Golf Academy Miami'
-  },
-  {
-    id: '4',
-    title: 'Iron Set - Beginner Friendly',
-    description: 'Set of 5 irons (6,7,8,9,PW) perfect for learning. Forgiving clubs for new players.',
-    equipmentType: 'irons',
-    condition: 'fair',
-    ageRange: '12+ years',
-    price: 45,
-    images: [],
-    status: 'pending',
-    distance: '3.1 miles',
-    userName: 'David Smith'
-  },
-  {
-    id: '5',
-    title: 'Pink Junior Golf Bag',
-    description: 'Lightweight golf bag designed for young female golfers. Includes stand and shoulder strap.',
-    equipmentType: 'bag',
-    condition: 'excellent',
-    ageRange: '8-14 years',
-    price: 35,
-    images: [],
-    status: 'available',
-    distance: '4.2 miles',
-    userName: 'Sarah Wilson'
-  },
-  {
-    id: '6',
-    title: 'Sand Wedge - Cleveland',
-    description: 'Great wedge for practicing bunker shots and short game. Recently donated by local pro.',
-    equipmentType: 'wedges',
-    condition: 'excellent',
-    ageRange: 'All ages',
-    price: 0,
-    images: [],
-    status: 'available',
-    distance: '1.5 miles',
-    userName: 'Doral Golf Academy'
-  }
-]
+import { fetchEquipmentFiltered, Equipment } from '@/lib/api'
 
 export default function EquipmentPage() {
   const [selectedType, setSelectedType] = useState<string>('all')
   const [selectedCondition, setSelectedCondition] = useState<string>('all')
   const [priceRange, setPriceRange] = useState<string>('all')
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredEquipment = sampleEquipment.filter(item => {
-    if (selectedType !== 'all' && item.equipmentType !== selectedType) return false
-    if (selectedCondition !== 'all' && item.condition !== selectedCondition) return false
-    if (priceRange !== 'all') {
-      if (priceRange === 'free' && item.price !== 0) return false
-      if (priceRange === 'under-50' && (item.price === 0 || item.price >= 50)) return false
-      if (priceRange === '50-100' && (item.price < 50 || item.price > 100)) return false
-      if (priceRange === 'over-100' && item.price <= 100) return false
+  // Load equipment from API with filters
+  useEffect(() => {
+    async function loadEquipment() {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const filters: any = {}
+
+        if (selectedType !== 'all') {
+          filters.equipment_type = selectedType
+        }
+
+        if (selectedCondition !== 'all') {
+          filters.condition = selectedCondition
+        }
+
+        if (priceRange !== 'all') {
+          if (priceRange === 'free') {
+            filters.max_price = 0
+          } else if (priceRange === 'under-50') {
+            filters.min_price = 1
+            filters.max_price = 49
+          } else if (priceRange === '50-100') {
+            filters.min_price = 50
+            filters.max_price = 100
+          } else if (priceRange === 'over-100') {
+            filters.min_price = 101
+          }
+        }
+
+        const equipmentData = await fetchEquipmentFiltered(filters)
+        setEquipment(equipmentData)
+      } catch (error) {
+        console.error('Failed to load equipment:', error)
+        setError('Failed to load equipment. Please try again.')
+        setEquipment([])
+      } finally {
+        setLoading(false)
+      }
     }
-    return true
-  })
+
+    loadEquipment()
+  }, [selectedType, selectedCondition, priceRange])
 
   const handleClaim = (equipment: Equipment) => {
     alert(`Claiming: ${equipment.title}`)
@@ -206,37 +147,62 @@ export default function EquipmentPage() {
           </div>
         </div>
 
-        {/* Results Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">
-            {filteredEquipment.length} items found
-          </h2>
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <span>🎯</span>
-            <span>Showing equipment within 5 miles</span>
-          </div>
-        </div>
-
-        {/* Equipment Grid */}
-        {filteredEquipment.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEquipment.map((equipment) => (
-              <EquipmentCard
-                key={equipment.id}
-                equipment={equipment}
-                onClaim={handleClaim}
-              />
-            ))}
-          </div>
-        ) : (
+        {/* Loading State */}
+        {loading && (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">🏌️</div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">No equipment found</h3>
-            <p className="text-gray-500 mb-6">Try adjusting your filters or check back later for new listings.</p>
-            <button className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
-              List Your Equipment
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading equipment...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <p>{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 text-red-800 underline"
+            >
+              Try again
             </button>
           </div>
+        )}
+
+        {/* Results Header */}
+        {!loading && !error && (
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">
+              {equipment.length} items found
+            </h2>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <span>🎯</span>
+              <span>Showing equipment within 5 miles</span>
+            </div>
+          </div>
+        )}
+
+        {/* Equipment Grid */}
+        {!loading && !error && (
+          equipment.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {equipment.map((equipmentItem) => (
+                <EquipmentCard
+                  key={equipmentItem.id}
+                  equipment={equipmentItem}
+                  onClaim={handleClaim}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-6xl mb-4">🏌️</div>
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">No equipment found</h3>
+              <p className="text-gray-500 mb-6">Try adjusting your filters or check back later for new listings.</p>
+              <button className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
+                List Your Equipment
+              </button>
+            </div>
+          )
         )}
 
         {/* Call to Action */}

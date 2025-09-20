@@ -8,20 +8,8 @@ import RecommendationEngine from '@/components/RecommendationEngine'
 import QuickStartWizard from '@/components/QuickStartWizard'
 import GoogleAuth from '@/components/GoogleAuth'
 import ProfileDropdown from '@/components/ProfileDropdown'
+import { Course } from '@/lib/api'
 import mapboxgl from 'mapbox-gl'
-
-interface Course {
-  id: string
-  name: string
-  address: string
-  lat: number
-  lng: number
-  greenFeeMin: number
-  greenFeeMax: number
-  youthPrograms: boolean
-  difficultyRating: number
-  equipmentRental: boolean
-}
 
 interface UserProfile {
   name: string
