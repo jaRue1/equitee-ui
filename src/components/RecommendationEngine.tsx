@@ -190,12 +190,6 @@ export default function RecommendationEngine({
                   : 'Your next steps await'}
               </p>
             </div>
-            <button
-              onClick={onToggle}
-              className="text-white hover:text-gray-200 text-xl transform hover:scale-110 transition-transform"
-            >
-              ←
-            </button>
           </div>
 
           {/* Progress Bar */}
