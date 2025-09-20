@@ -662,6 +662,87 @@ export async function fetchChatMessages(conversationId: string): Promise<ChatMes
   }
 }
 
+// AI Query function for open-ended questions
+export async function sendAIQuery(
+  query: string,
+  userLocation?: { lat: number; lng: number }
+): Promise<{ success: boolean; message: string; followUpQuestions?: string[]; courseCitations?: Course[] }> {
+  try {
+    const headers = await getHeaders()
+
+    const response = await fetch(`${API_BASE_URL}/ai/query`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        query,
+        userLocation: userLocation || { lat: 25.7617, lng: -80.1918 }
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('AI query error response:', errorText)
+      throw new Error(`Failed to query AI: ${response.status}`)
+    }
+
+    const result = await response.json()
+    console.log('AI query successful:', result)
+
+    // Post-process response to find course citations
+    const courseCitations = await findCourseCitations(result.message)
+
+    return {
+      ...result,
+      courseCitations
+    }
+  } catch (error) {
+    console.error('Error in AI query:', error)
+    throw error
+  }
+}
+
+// Helper function to find course citations in AI response
+async function findCourseCitations(aiMessage: string): Promise<Course[]> {
+  try {
+    // Get all courses from database
+    const allCourses = await fetchCourses()
+
+    // Look for course names mentioned in the AI response
+    const citedCourses: Course[] = []
+
+    // Common course name patterns to search for
+    const courseNamePatterns = [
+      /([A-Z][a-z]+ ?)+Golf ?(Course|Club|Links)/gi,
+      /([A-Z][a-z]+ ?)+Country Club/gi,
+      /(Red Reef|Osprey Point|Boca Raton)/gi
+    ]
+
+    for (const pattern of courseNamePatterns) {
+      const matches = aiMessage.match(pattern)
+      if (matches) {
+        for (const match of matches) {
+          // Find matching courses in our database (fuzzy matching)
+          const matchingCourse = allCourses.find(course =>
+            course.name.toLowerCase().includes(match.toLowerCase().replace(/golf course|golf club|country club/gi, '').trim()) ||
+            match.toLowerCase().includes(course.name.toLowerCase().replace(/golf course|golf club|country club/gi, '').trim())
+          )
+
+          if (matchingCourse && !citedCourses.find(c => c.id === matchingCourse.id)) {
+            citedCourses.push(matchingCourse)
+          }
+        }
+      }
+    }
+
+    console.log(`Found ${citedCourses.length} course citations in AI response:`, citedCourses.map(c => c.name))
+    return citedCourses
+
+  } catch (error) {
+    console.error('Error finding course citations:', error)
+    return []
+  }
+}
+
 export async function sendChatMessage(
   conversationId: string | null,
   message: string,
@@ -677,21 +758,73 @@ export async function sendChatMessage(
         method: 'POST',
         headers,
         body: JSON.stringify({
-          message,
-          user_location: userLocation
+          userLocation: userLocation || { lat: 25.7617, lng: -80.1918 } // Default to Miami if no location
         })
       })
 
       if (!startResponse.ok) {
+        const errorText = await startResponse.text()
+        console.error('Chat start error response:', errorText)
         throw new Error(`Failed to start conversation: ${startResponse.status}`)
       }
 
       const result = await startResponse.json()
-      console.log('New chat conversation started successfully')
+      console.log('New chat conversation started successfully:', result)
+
+      // Transform the response to match expected structure
+      const conversation: ChatConversation = {
+        id: result.conversationId,
+        user_id: 'current-user', // We'll need to get this from session
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        title: 'Golf Consultation',
+        metadata: { mode: result.mode }
+      }
+
+      const welcomeMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        conversation_id: result.conversationId,
+        content: result.message,
+        role: 'assistant',
+        created_at: new Date().toISOString(),
+        metadata: result.options ? { options: result.options } : undefined
+      }
+
+      // For new conversations, we need to send the first user message
+      if (message.trim()) {
+        // Send the user's message to the new conversation
+        const messageResponse = await fetch(`${API_BASE_URL}/chat/message`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            conversationId: result.conversationId,
+            message: message
+          })
+        })
+
+        if (messageResponse.ok) {
+          const messageResult = await messageResponse.json()
+          const aiResponse: ChatMessage = {
+            id: `msg_${Date.now() + 1}`,
+            conversation_id: result.conversationId,
+            content: messageResult.message,
+            role: 'assistant',
+            created_at: new Date().toISOString(),
+            metadata: messageResult.recommendations ? { recommendations: messageResult.recommendations } : undefined
+          }
+
+          return {
+            conversation,
+            message: welcomeMessage,
+            aiResponse
+          }
+        }
+      }
+
       return {
-        conversation: transformChatConversation(result.conversation),
-        message: transformChatMessage(result.message),
-        aiResponse: result.ai_response ? transformChatMessage(result.ai_response) : undefined
+        conversation,
+        message: welcomeMessage,
+        aiResponse: undefined
       }
     } else {
       // Send message to existing conversation
@@ -700,22 +833,51 @@ export async function sendChatMessage(
         method: 'POST',
         headers,
         body: JSON.stringify({
-          conversation_id: conversationId,
-          message,
-          user_location: userLocation
+          conversationId: conversationId,
+          message
         })
       })
 
       if (!messageResponse.ok) {
+        const errorText = await messageResponse.text()
+        console.error('Chat message error response:', errorText)
         throw new Error(`Failed to send message: ${messageResponse.status}`)
       }
 
       const result = await messageResponse.json()
-      console.log('Message sent successfully')
+      console.log('Message sent successfully:', result)
+
+      // Transform the response to match expected structure
+      const conversation: ChatConversation = {
+        id: conversationId,
+        user_id: 'current-user',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        title: 'Golf Consultation',
+        metadata: {}
+      }
+
+      const userMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        conversation_id: conversationId,
+        content: message,
+        role: 'user',
+        created_at: new Date().toISOString()
+      }
+
+      const aiResponse: ChatMessage = {
+        id: `msg_${Date.now() + 1}`,
+        conversation_id: conversationId,
+        content: result.message,
+        role: 'assistant',
+        created_at: new Date().toISOString(),
+        metadata: result.options ? { options: result.options } : undefined
+      }
+
       return {
-        conversation: transformChatConversation(result.conversation),
-        message: transformChatMessage(result.message),
-        aiResponse: result.ai_response ? transformChatMessage(result.ai_response) : undefined
+        conversation,
+        message: userMessage,
+        aiResponse
       }
     }
   } catch (error) {

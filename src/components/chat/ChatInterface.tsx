@@ -1,16 +1,18 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { type Message, type ChatState, type CourseRecommendation } from '@/types/chat'
-import { sendChatMessage, ChatConversation } from '@/lib/api'
+import { type Message, type ChatState, type CourseRecommendation, type Course } from '@/types/chat'
+import { sendChatMessage, sendAIQuery, ChatConversation } from '@/lib/api'
 
 interface ChatInterfaceProps {
   onRecommendations?: (recommendations: CourseRecommendation[]) => void
+  onCourseSelect?: (course: Course) => void
+  onCourseNavigate?: (courseId: string) => void
   userLocation?: { lat: number; lng: number }
   className?: string
 }
 
-export default function ChatInterface({ onRecommendations, userLocation, className = '' }: ChatInterfaceProps) {
+export default function ChatInterface({ onRecommendations, onCourseNavigate, userLocation, className = '' }: ChatInterfaceProps) {
   const [chatState, setChatState] = useState<ChatState>({
     messages: [],
     isOpen: false,
@@ -213,55 +215,81 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
     setChatError(null)
 
     try {
-      // Send message to real AI API
-      const response = await sendChatMessage(
-        currentConversation?.id || null,
-        userQuestion,
-        userLocation
-      )
+      if (chatState.mode === 'ai_consultant') {
+        // Use AI query endpoint for open-ended questions
+        const response = await sendAIQuery(userQuestion, userLocation)
 
-      // Validate API response structure
-      if (!response || !response.conversation) {
-        throw new Error('Invalid response from server')
-      }
+        if (response.success) {
+          setChatState(prev => ({ ...prev, loading: false }))
+          setRetryCount(0)
 
-      // Update conversation state
-      setCurrentConversation(response.conversation)
-      setChatState(prev => ({
-        ...prev,
-        conversationId: response.conversation.id,
-        loading: false
-      }))
+          addMessage({
+            id: generateMessageId(),
+            type: 'bot',
+            content: response.message,
+            timestamp: new Date(),
+            courseCitations: response.courseCitations
+          })
 
-      // Reset retry count on success
-      setRetryCount(0)
-
-      // Add AI response with validation
-      if (response.aiResponse && response.aiResponse.message) {
-        addMessage({
-          id: generateMessageId(),
-          type: 'bot',
-          content: response.aiResponse.message,
-          timestamp: new Date()
-        })
-
-        // Extract and validate recommendations if available
-        if (response.aiResponse.metadata?.recommendations && Array.isArray(response.aiResponse.metadata.recommendations)) {
-          const validRecommendations = response.aiResponse.metadata.recommendations.filter(rec =>
-            rec && rec.course && rec.course.id && typeof rec.course.lat === 'number' && typeof rec.course.lng === 'number'
-          )
-          if (validRecommendations.length > 0 && onRecommendations) {
-            onRecommendations(validRecommendations)
+          // If there are course citations and onCourseSelect callback, prepare for navigation
+          if (response.courseCitations && response.courseCitations.length > 0) {
+            console.log('AI cited courses from database:', response.courseCitations.map(c => `${c.name} (${c.id})`))
           }
+        } else {
+          throw new Error('AI query failed')
         }
       } else {
-        // Handle case where AI response is missing or invalid
-        addMessage({
-          id: generateMessageId(),
-          type: 'bot',
-          content: 'I received your message but couldn\'t generate a proper response. Please try rephrasing your question.',
-          timestamp: new Date()
-        })
+        // Use chat endpoints for onboarding flow
+        const response = await sendChatMessage(
+          currentConversation?.id || null,
+          userQuestion,
+          userLocation
+        )
+
+        // Validate API response structure
+        if (!response || !response.conversation) {
+          throw new Error('Invalid response from server')
+        }
+
+        // Update conversation state
+        setCurrentConversation(response.conversation)
+        setChatState(prev => ({
+          ...prev,
+          conversationId: response.conversation.id,
+          loading: false
+        }))
+
+        // Reset retry count on success
+        setRetryCount(0)
+
+        // Add AI response with validation
+        if (response.aiResponse && response.aiResponse.content) {
+          addMessage({
+            id: generateMessageId(),
+            type: 'bot',
+            content: response.aiResponse.content,
+            timestamp: new Date(),
+            options: response.aiResponse.metadata?.options
+          })
+
+          // Extract and validate recommendations if available
+          if (response.aiResponse.metadata?.recommendations && Array.isArray(response.aiResponse.metadata.recommendations)) {
+            const validRecommendations = response.aiResponse.metadata.recommendations.filter(rec =>
+              rec && rec.course && rec.course.id && typeof rec.course.lat === 'number' && typeof rec.course.lng === 'number'
+            )
+            if (validRecommendations.length > 0 && onRecommendations) {
+              onRecommendations(validRecommendations)
+            }
+          }
+        } else {
+          // Handle case where AI response is missing or invalid
+          addMessage({
+            id: generateMessageId(),
+            type: 'bot',
+            content: 'I received your message but couldn\'t generate a proper response. Please try rephrasing your question.',
+            timestamp: new Date()
+          })
+        }
       }
     } catch (error) {
       console.error('Error sending chat message:', error)
@@ -330,6 +358,51 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       handleOptionClick(option)
+    }
+  }
+
+  // Parse message content and convert course links to clickable elements
+  const parseMessageContent = (content: string) => {
+    // Regex to match [Course Name](course://course_id) format
+    const courseRegex = /\[([^\]]+)\]\(course:\/\/([^)]+)\)/g
+    const parts: Array<{ type: 'text'; content: string } | { type: 'course'; name: string; id: string }> = []
+    let lastIndex = 0
+    let match
+
+    while ((match = courseRegex.exec(content)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push({
+          type: 'text',
+          content: content.slice(lastIndex, match.index)
+        })
+      }
+
+      // Add the course link
+      parts.push({
+        type: 'course',
+        name: match[1],
+        id: match[2]
+      })
+
+      lastIndex = match.index + match[0].length
+    }
+
+    // Add any remaining text
+    if (lastIndex < content.length) {
+      parts.push({
+        type: 'text',
+        content: content.slice(lastIndex)
+      })
+    }
+
+    return parts
+  }
+
+  const handleCourseClick = (courseId: string, courseName: string) => {
+    console.log(`Navigating to course: ${courseName} (${courseId})`)
+    if (onCourseNavigate) {
+      onCourseNavigate(courseId)
     }
   }
 
@@ -411,7 +484,31 @@ export default function ChatInterface({ onRecommendations, userLocation, classNa
                       : 'bg-gray-100 text-gray-900'
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <div className="text-sm">
+                    {parseMessageContent(message.content).map((part, partIndex) => {
+                      if (part.type === 'text') {
+                        // Split by newlines to handle line breaks
+                        return part.content.split('\n').map((line, lineIndex, array) => (
+                          <span key={`${partIndex}-${lineIndex}`}>
+                            {line}
+                            {lineIndex < array.length - 1 && <br />}
+                          </span>
+                        ))
+                      } else if (part.type === 'course') {
+                        return (
+                          <button
+                            key={`${partIndex}-course`}
+                            onClick={() => handleCourseClick(part.id, part.name)}
+                            className="inline-flex items-center text-green-600 hover:text-green-700 underline font-medium transition-colors"
+                            title={`Navigate to ${part.name}`}
+                          >
+                            📍 {part.name}
+                          </button>
+                        )
+                      }
+                      return null
+                    })}
+                  </div>
                   {message.options && (
                     <div className="mt-2 space-y-1">
                       {message.options.map((option, index) => (

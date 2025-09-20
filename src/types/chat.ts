@@ -1,5 +1,5 @@
 // Import types from map first
-import type { CourseRecommendation, MapHighlight } from '@/types/map'
+import type { CourseRecommendation, MapHighlight, Course } from '@/types/map'
 
 export interface Message {
   id: string
@@ -8,6 +8,7 @@ export interface Message {
   timestamp: Date
   options?: string[]
   recommendations?: CourseRecommendation[]
+  courseCitations?: Course[]
 }
 
 export interface ChatState {

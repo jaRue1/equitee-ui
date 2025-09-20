@@ -194,6 +194,36 @@ export default function Home() {
     }
   }
 
+  // Handle course navigation from chat links
+  const handleCourseNavigate = async (courseId: string) => {
+    console.log('Navigating to course:', courseId)
+
+    try {
+      // Fetch the course details from the API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/courses/${courseId}`)
+      if (response.ok) {
+        const course = await response.json()
+
+        // Center map on the course
+        if (mapRef.current && course.lat && course.lng) {
+          mapRef.current.flyTo({
+            center: [course.lng, course.lat],
+            zoom: 15,
+            duration: 1500
+          })
+
+          // Select the course to show details
+          setSelectedCourse(course)
+          setSidebarMode('course-detail')
+        }
+      } else {
+        console.error('Failed to fetch course details')
+      }
+    } catch (error) {
+      console.error('Error navigating to course:', error)
+    }
+  }
+
   // Show landing page for unauthenticated users
   if (!session) {
     return (
@@ -584,6 +614,7 @@ export default function Home() {
           {/* Chat Interface */}
           <ChatInterface
             onRecommendations={handleChatRecommendations}
+            onCourseNavigate={handleCourseNavigate}
             userLocation={userLocation || undefined}
           />
 
