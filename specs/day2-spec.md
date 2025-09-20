@@ -1,4 +1,4 @@
-# EquiTee Frontend Development Specification
+# EquiTee Frontend Development Specification - Final
 
 ## Project Structure
 ```
@@ -11,6 +11,7 @@ src/
 │   │   └── MapLegend.tsx
 │   ├── chat/
 │   │   ├── ChatInterface.tsx
+│   │   ├── AIGolfAgent.tsx
 │   │   ├── MessageBubble.tsx
 │   │   └── QuickReply.tsx
 │   ├── onboarding/
@@ -165,66 +166,281 @@ interface FilterState {
 // - Clear all filters button
 ```
 
-## Phase 3: AI Journey Planner (Hours 3.5-5.5)
+## Phase 3: AI Community Golf Agent (Hours 3.5-5.5)
 
-### Conversational Flow
-**File:** `hooks/useChatState.ts`
+### AI Golf Agent Component
+**File:** `components/chat/AIGolfAgent.tsx`
 ```typescript
-interface ChatResponse {
-  botMessage: string;
-  recommendations?: CourseRecommendation[];
-  mapHighlights?: MapHighlight[];
-  options?: string[];
-  mode: 'onboarding' | 'ai_consultant';
+import { useChat } from 'ai/react';
+
+interface AgentMessage extends Message {
+  toolInvocations?: {
+    toolName: string;
+    toolCallId: string;
+    args: any;
+    result?: any;
+  }[];
+  mapHighlights?: {
+    courseId: string;
+    lat: number;
+    lng: number;
+    type: 'course' | 'program' | 'mentor';
+  }[];
 }
 
-// Phase 1: Onboarding Conversation flow (Branching Logic):
-// 1. "Have you played golf before?" [Yes/No buttons]
-// 2a. Yes: "What's your average score?" [Text input]
-// 2b. No: "What's your budget for getting started?" [Select options]
-// 3. Generate recommendations based on experience + location + budget
-// 4. Show personalized journey plan with milestones
-// 5. "Would you like to ask me questions about golf courses?" [Transition to AI mode]
+interface UserProfile {
+  experienceLevel?: string;
+  budget?: number;
+  age?: number;
+  hasEquipment?: boolean;
+  hasTransportation?: boolean;
+}
 
-// Phase 2: AI Golf Consultant (RAG System):
-// - Free-text questions about courses, golf tips, local programs
-// - Semantic search through vectorized course data and golf knowledge
-// - Location-aware responses using user's GPS data
-// - Fallback to basic recommendations if AI query fails
-```
+export const AIGolfAgent: React.FC = () => {
+  const [userProfile, setUserProfile] = useState<UserProfile>({});
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/ai/chat',
+    body: {
+      userLocation,
+      userProfile
+    },
+    onFinish: (message) => {
+      // Handle map highlighting for mentioned courses/programs
+      if (message.mapHighlights) {
+        handleMapHighlights(message.mapHighlights);
+      }
+      
+      // Update user profile based on conversation
+      updateProfileFromConversation(message);
+    }
+  });
 
-### Map Integration for Recommendations
-**File:** `components/map/InteractiveMap.tsx`
-```typescript
-// Add recommendation highlighting:
-// - Pulsing animation for recommended locations
-// - Numbered markers (1, 2, 3) for progression order
-// - Auto-pan to show all recommendations
-// - Route visualization using Mapbox Directions API
+  const handleMapHighlights = (highlights: AgentMessage['mapHighlights']) => {
+    // Send highlights to parent map component
+    highlights?.forEach(highlight => {
+      // Trigger map to highlight specific locations
+      // Different styling for courses vs programs vs mentors
+      window.dispatchEvent(new CustomEvent('highlightMapLocation', {
+        detail: highlight
+      }));
+    });
+  };
 
-const highlightRecommendations = (recommendations: CourseRecommendation[]) => {
-  // Implementation for highlighting recommended courses
-  // Add pulsing markers with progression numbers
-  // Calculate bounds to show all recommendations
-  // Draw routes from user location
+  const updateProfileFromConversation = (message: any) => {
+    // Extract profile information from AI agent interactions
+    // Update local state to improve future recommendations
+  };
+
+  return (
+    <div className="ai-golf-agent">
+      <div className="messages-container">
+        {messages.map((message) => (
+          <AgentMessageBubble 
+            key={message.id} 
+            message={message as AgentMessage}
+            onJoinGroup={handleJoinGroup}
+            onContactMentor={handleContactMentor}
+          />
+        ))}
+      </div>
+      
+      {isLoading && (
+        <div className="thinking-indicator">
+          <span>AI is analyzing your request...</span>
+          <div className="tool-calls">
+            {/* Show which tools are being called in real-time */}
+          </div>
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="input-form">
+        <input
+          value={input}
+          placeholder="Ask me anything about golf in South Florida..."
+          onChange={handleInputChange}
+          disabled={isLoading}
+        />
+        <button type="submit" disabled={isLoading}>
+          Send
+        </button>
+      </form>
+      
+      <div className="suggested-questions">
+        {getSuggestedQuestions(userProfile).map(question => (
+          <button 
+            key={question}
+            onClick={() => handleInputChange({ target: { value: question } } as any)}
+            className="suggestion-chip"
+          >
+            {question}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 };
 ```
 
-### Route Visualization
-**File:** `utils/mapHelpers.ts`
+### Agent Message Display Components
+**File:** `components/chat/AgentMessageBubble.tsx`
 ```typescript
-interface RouteOptions {
-  userLocation: { lat: number; lng: number };
-  destination: { lat: number; lng: number };
-  transportMode: 'driving' | 'walking' | 'transit';
-}
-
-export const drawRoute = async (map: MapboxMap, options: RouteOptions) => {
-  // Use Mapbox Directions API
-  // Add route line to map
-  // Show estimated travel time
-  // Color-code by difficulty/cost
+const AgentMessageBubble: React.FC<{
+  message: AgentMessage;
+  onJoinGroup: (groupId: string) => void;
+  onContactMentor: (mentorId: string) => void;
+}> = ({ message, onJoinGroup, onContactMentor }) => {
+  return (
+    <div className={`message ${message.role}`}>
+      <div className="content">{message.content}</div>
+      
+      {/* Show tool usage */}
+      {message.toolInvocations && (
+        <div className="tool-results">
+          {message.toolInvocations.map((tool, index) => (
+            <ToolResultDisplay 
+              key={`${tool.toolCallId}-${index}`}
+              toolName={tool.toolName}
+              result={tool.result}
+              onJoinGroup={onJoinGroup}
+              onContactMentor={onContactMentor}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
+
+const ToolResultDisplay: React.FC<{
+  toolName: string;
+  result: any;
+  onJoinGroup: (groupId: string) => void;
+  onContactMentor: (mentorId: string) => void;
+}> = ({ toolName, result, onJoinGroup, onContactMentor }) => {
+  switch (toolName) {
+    case 'findPlayingPartners':
+      return (
+        <div className="playing-partners-results">
+          <h4>Available Golf Groups:</h4>
+          {result.map((group: any) => (
+            <div key={group.id} className="group-card">
+              <span>{group.course.name} - {group.date} at {group.time}</span>
+              <span>{group.members}/{group.maxMembers} players</span>
+              <button onClick={() => onJoinGroup(group.id)}>
+                Join Group
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+      
+    case 'findMentorsInArea':
+      return (
+        <div className="mentors-results">
+          <h4>Available Mentors:</h4>
+          {result.map((mentor: any) => (
+            <div key={mentor.id} className="mentor-card">
+              <span>{mentor.name} - ${mentor.hourlyRate}/hour</span>
+              <span>{mentor.experience} years experience</span>
+              <button onClick={() => onContactMentor(mentor.id)}>
+                Contact Mentor
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+      
+    case 'searchCourses':
+      return (
+        <div className="courses-results">
+          <h4>Recommended Courses:</h4>
+          {result.map((course: any) => (
+            <div key={course.id} className="course-card">
+              <span>{course.name}</span>
+              <span>${course.greenFeeMin}-${course.greenFeeMax}</span>
+              <span>Difficulty: {course.difficultyRating}/5</span>
+            </div>
+          ))}
+        </div>
+      );
+      
+    default:
+      return <div className="tool-result">{JSON.stringify(result, null, 2)}</div>;
+  }
+};
+
+const getSuggestedQuestions = (profile: UserProfile): string[] => {
+  const baseQuestions = [
+    "Find me beginner golf groups this weekend",
+    "What equipment do I need to get started?",
+    "Connect me with a golf mentor in my area"
+  ];
+  
+  if (!profile.experienceLevel) {
+    return [
+      "I'm new to golf, where should I start?",
+      "Find youth golf programs near me",
+      ...baseQuestions
+    ];
+  }
+  
+  return baseQuestions;
+};
+```
+
+### Map Integration for Agent Highlights
+**File:** `components/map/InteractiveMap.tsx` (Map highlighting integration)
+```typescript
+// Add to existing map component:
+
+useEffect(() => {
+  const handleAgentHighlight = (event: CustomEvent) => {
+    const { courseId, lat, lng, type } = event.detail;
+    
+    // Create different marker styles for different types
+    const markerColor = {
+      course: '#10B981', // green
+      program: '#3B82F6', // blue  
+      mentor: '#8B5CF6'   // purple
+    }[type];
+    
+    // Add pulsing highlight marker
+    const highlightMarker = new mapboxgl.Marker({
+      color: markerColor,
+      scale: 1.5
+    })
+    .setLngLat([lng, lat])
+    .addTo(mapRef.current);
+    
+    // Add popup with context
+    const popup = new mapboxgl.Popup()
+      .setHTML(`<div>Recommended by AI Golf Coach</div>`)
+      .addTo(mapRef.current);
+    
+    highlightMarker.setPopup(popup);
+    
+    // Auto-focus on highlighted area
+    mapRef.current.flyTo({
+      center: [lng, lat],
+      zoom: 12,
+      duration: 1000
+    });
+    
+    // Remove highlight after 10 seconds
+    setTimeout(() => {
+      highlightMarker.remove();
+      popup.remove();
+    }, 10000);
+  };
+  
+  window.addEventListener('highlightMapLocation', handleAgentHighlight);
+  
+  return () => {
+    window.removeEventListener('highlightMapLocation', handleAgentHighlight);
+  };
+}, []);
 ```
 
 ## Phase 4: Polish & Integration (Hours 5.5-7)
@@ -245,54 +461,111 @@ export const drawRoute = async (map: MapboxMap, options: RouteOptions) => {
 - Message bubble animations in chat
 - Course marker selection feedback
 
-### AI Chat Integration (Stretch Goal)
-**File:** `components/chat/AIConsultant.tsx`
+### API Route for Vercel AI SDK
+**File:** `pages/api/ai/chat.ts` (or `app/api/ai/chat/route.ts` for App Router)
 ```typescript
-interface AIQueryRequest {
-  question: string;
-  userLocation: { lat: number; lng: number };
-  conversationHistory: Message[];
+import { createOpenAI } from '@ai-sdk/openai';
+import { streamText, tool } from 'ai';
+import { z } from 'zod';
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export async function POST(req: Request) {
+  const { messages, userLocation, userProfile } = await req.json();
+
+  const result = await streamText({
+    model: openai('gpt-4'),
+    system: `You are a Golf Community Coach for South Florida. Help users create learning paths and connect with the golf community. Always use tools to get real data.`,
+    messages,
+    tools: {
+      searchCourses: tool({
+        description: 'Find golf courses based on criteria',
+        parameters: z.object({
+          location: z.object({ lat: z.number(), lng: z.number() }),
+          budget: z.number().optional(),
+          difficulty: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+          radius: z.number().default(25)
+        }),
+        execute: async (params) => {
+          // Call your backend API
+          const response = await fetch(`${process.env.API_URL}/api/courses/search`, {
+            method: 'POST',
+            body: JSON.stringify(params)
+          });
+          return response.json();
+        }
+      }),
+      
+      findPlayingPartners: tool({
+        description: 'Find other golfers to play with',
+        parameters: z.object({
+          courseId: z.string(),
+          date: z.string(),
+          skillLevel: z.string()
+        }),
+        execute: async (params) => {
+          const response = await fetch(`${process.env.API_URL}/api/community/playing-partners`, {
+            method: 'POST',
+            body: JSON.stringify(params)
+          });
+          return response.json();
+        }
+      }),
+      
+      findYouthPrograms: tool({
+        description: 'Find youth golf programs',
+        parameters: z.object({
+          location: z.object({ lat: z.number(), lng: z.number() }),
+          ageRange: z.array(z.number()),
+          budget: z.number()
+        }),
+        execute: async (params) => {
+          const response = await fetch(`${process.env.API_URL}/api/community/youth-programs`, {
+            method: 'POST',
+            body: JSON.stringify(params)
+          });
+          return response.json();
+        }
+      }),
+      
+      getAccessibilityScore: tool({
+        description: 'Get golf accessibility score for location',
+        parameters: z.object({
+          lat: z.number(),
+          lng: z.number()
+        }),
+        execute: async (params) => {
+          const response = await fetch(`${process.env.API_URL}/api/demographics/accessibility-score/${params.lat}/${params.lng}`);
+          return response.json();
+        }
+      }),
+      
+      findMentorsInArea: tool({
+        description: 'Find golf mentors nearby',
+        parameters: z.object({
+          location: z.object({ lat: z.number(), lng: z.number() }),
+          budget: z.number(),
+          experienceLevel: z.string()
+        }),
+        execute: async (params) => {
+          const response = await fetch(`${process.env.API_URL}/api/community/mentors`, {
+            method: 'POST',
+            body: JSON.stringify(params)
+          });
+          return response.json();
+        }
+      })
+    },
+    maxToolRoundtrips: 3,
+  });
+
+  return result.toAIStreamResponse();
 }
-
-interface AIQueryResponse {
-  answer: string;
-  sources: Course[];
-  mapHighlights?: { lat: number; lng: number; courseId: string }[];
-  followUpQuestions?: string[];
-}
-
-// Implementation requirements:
-// - Text input for natural language questions
-// - Loading states with "AI is thinking..." indicator
-// - Display of source courses used in response
-// - Map highlighting of mentioned courses
-// - Suggested follow-up questions
-// - Graceful fallback to basic search if AI fails
-
-// Example interactions:
-// User: "What's the best course for a beginner near Homestead?"
-// AI: "Based on your location, I recommend Redland Golf & Country Club. It's a beginner-friendly course (2.5/5 difficulty) just 8 miles from Homestead with green fees starting at $45. They offer equipment rental and have an active youth program."
-
-// User: "I have $100 budget, where can I play this weekend?"
-// AI: "With a $100 budget, you have several great options near you: [lists 3 courses with pricing and weekend availability]"
 ```
 
-**File:** `utils/aiClient.ts`
-```typescript
-export const aiClient = {
-  async queryGolfConsultant(request: AIQueryRequest): Promise<AIQueryResponse> {
-    // Send user question + location to RAG endpoint
-    // Handle response and map highlighting
-    // Extract course references for map integration
-    return fetch('/api/ai/query', {
-      method: 'POST',
-      body: JSON.stringify(request)
-    }).then(res => res.json());
-  }
-};
-```
-
-## API Integration Patterns
+## API Integration
 
 ### API Client Setup
 **File:** `utils/apiClient.ts`
@@ -307,16 +580,19 @@ export const apiClient = {
       body: JSON.stringify(data)
     })
   },
-  ai: {
-    query: (data: AIQueryRequest) => fetch(`${API_BASE}/api/ai/query`, {
-      method: 'POST', 
-      body: JSON.stringify(data)
-    })
-  },
   demographics: {
     getHeatmap: () => fetch(`${API_BASE}/api/demographics/heatmap`),
     getAccessibilityScore: (lat: number, lng: number) => 
       fetch(`${API_BASE}/api/demographics/accessibility-score/${lat}/${lng}`)
+  },
+  community: {
+    joinGroup: (groupId: string) => fetch(`${API_BASE}/api/community/groups/${groupId}/join`, {
+      method: 'POST'
+    }),
+    contactMentor: (mentorId: string, message: string) => fetch(`${API_BASE}/api/community/mentors/${mentorId}/contact`, {
+      method: 'POST',
+      body: JSON.stringify({ message })
+    })
   }
 };
 ```
@@ -352,22 +628,36 @@ export interface CourseRecommendation {
   estimatedCost: number;
   travelTime: string;
 }
+
+export interface GolfGroup {
+  id: string;
+  courseId: string;
+  courseName: string;
+  date: string;
+  time: string;
+  members: number;
+  maxMembers: number;
+  skillLevel: string;
+  description: string;
+}
+
+export interface Mentor {
+  id: string;
+  name: string;
+  experience: string;
+  hourlyRate: number;
+  specialties: string[];
+  bio: string;
+}
 ```
 
 ## Environment Variables
 ```env
 NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.xxx
 NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=GA_MEASUREMENT_ID
+OPENAI_API_KEY=sk-xxx
+API_URL=http://localhost:3001
 ```
-
-## Testing Strategy
-- Unit tests for utility functions
-- Integration tests for API calls
-- E2E tests for critical user flows:
-  - Location permission → map load → course selection
-  - Chat flow → recommendations → map highlighting
-  - Filter application → marker updates
 
 ## Performance Considerations
 - Lazy load map components
@@ -375,3 +665,4 @@ NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=GA_MEASUREMENT_ID
 - Cache API responses in localStorage
 - Optimize Mapbox layer rendering
 - Compress and optimize images
+- Use Vercel AI SDK streaming for better UX

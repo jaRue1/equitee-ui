@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import InteractiveMap from '@/components/InteractiveMap'
+import InteractiveMap from '@/components/map/InteractiveMap'
 import RecommendationEngine from '@/components/RecommendationEngine'
 import QuickStartWizard from '@/components/QuickStartWizard'
 import GoogleAuth from '@/components/GoogleAuth'

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { fetchCourses, fetchMapConfig, Course, MapConfig } from '@/lib/api'
+import HeatMapLayer, { type DemographicData } from './HeatMapLayer'
+import MapLegend from './MapLegend'
 
 interface InteractiveMapProps {
   onCourseSelect?: (course: Course) => void
@@ -20,6 +22,57 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
   const [coursesError, setCoursesError] = useState<string | null>(null)
   const [mapConfig, setMapConfig] = useState<MapConfig | null>(null)
   const [mapConfigError, setMapConfigError] = useState<string | null>(null)
+  const [heatMapVisible, setHeatMapVisible] = useState(false)
+  const [demographicData, setDemographicData] = useState<DemographicData[]>([])
+
+  // Mock demographic data for South Florida (this would come from API in production)
+  const mockDemographicData: DemographicData[] = [
+    {
+      zipCode: '33101',
+      medianIncome: 85000,
+      accessibilityScore: 85,
+      bounds: {
+        type: 'Polygon',
+        coordinates: [[
+          [-80.1918, 25.7617],
+          [-80.1768, 25.7617],
+          [-80.1768, 25.7767],
+          [-80.1918, 25.7767],
+          [-80.1918, 25.7617]
+        ]]
+      }
+    },
+    {
+      zipCode: '33134',
+      medianIncome: 65000,
+      accessibilityScore: 72,
+      bounds: {
+        type: 'Polygon',
+        coordinates: [[
+          [-80.2418, 25.7417],
+          [-80.2268, 25.7417],
+          [-80.2268, 25.7567],
+          [-80.2418, 25.7567],
+          [-80.2418, 25.7417]
+        ]]
+      }
+    },
+    {
+      zipCode: '33143',
+      medianIncome: 45000,
+      accessibilityScore: 58,
+      bounds: {
+        type: 'Polygon',
+        coordinates: [[
+          [-80.3118, 25.7017],
+          [-80.2968, 25.7017],
+          [-80.2968, 25.7167],
+          [-80.3118, 25.7167],
+          [-80.3118, 25.7017]
+        ]]
+      }
+    }
+  ]
 
   // Load map config from API
   useEffect(() => {
@@ -57,6 +110,15 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
 
     loadCourses()
   }, [])
+
+  // Load demographic data (mock data for now)
+  useEffect(() => {
+    setDemographicData(mockDemographicData)
+  }, [])
+
+  const handleHeatMapToggle = () => {
+    setHeatMapVisible(prev => !prev)
+  }
 
   useEffect(() => {
     if (!mapContainer.current || !mapConfig) return
@@ -295,35 +357,20 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         </div>
       )}
 
-      {/* Map Legend - Top Right */}
-      <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 min-w-[200px]">
-        <h4 className="font-semibold text-sm mb-3">Map Legend</h4>
-        <div className="space-y-2">
-          <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">⛳</div>
-            <span className="text-sm">Youth Programs</span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">🏌️</div>
-            <span className="text-sm">Golf Courses</span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs">🎁</div>
-            <span className="text-sm">Equipment</span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs">👨‍🏫</div>
-            <span className="text-sm">Mentors</span>
-          </div>
-        </div>
+      {/* Heat Map Layer */}
+      <HeatMapLayer
+        map={map.current}
+        demographicData={demographicData}
+        visible={heatMapVisible}
+        onToggle={handleHeatMapToggle}
+      />
 
-        <div className="mt-3 pt-3 border-t border-gray-200">
-          <div className="flex items-center space-x-2 text-xs text-gray-600">
-            <span>🔄</span>
-            <span>3D View Active</span>
-          </div>
-        </div>
-      </div>
+      {/* Map Legend - Top Right */}
+      <MapLegend
+        heatMapVisible={heatMapVisible}
+        onHeatMapToggle={handleHeatMapToggle}
+        className="absolute top-4 right-4"
+      />
 
     </div>
   )
