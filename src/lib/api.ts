@@ -174,7 +174,8 @@ export async function fetchEquipmentFiltered(filters: {
   try {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
+      if (value !== undefined && value !== null) {
+        if (typeof value === 'string' && value === '') return
         params.append(key, value.toString())
       }
     })
@@ -203,7 +204,8 @@ export async function searchCourses(filters: {
   try {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
+      if (value !== undefined && value !== null) {
+        if (typeof value === 'string' && value === '') return
         params.append(key, value.toString())
       }
     })
