@@ -148,47 +148,9 @@ export default function Home() {
     }
   }, [session, userProfile])
 
-  // Helper function to resize map while preserving right edge
-  const resizeMapPreservingRightEdge = () => {
-    if (!mapRef.current) return
-
-    // Get current right edge before resize
-    const currentBounds = mapRef.current.getBounds()
-    const rightLng = currentBounds.getEast()
-
-    // Resize the map
-    mapRef.current.resize()
-
-    // Adjust center to keep right edge fixed
-    const newBounds = mapRef.current.getBounds()
-    const newRightLng = newBounds.getEast()
-    const lngDiff = rightLng - newRightLng
-
-    if (Math.abs(lngDiff) > 0.0001) {
-      const currentCenter = mapRef.current.getCenter()
-      mapRef.current.setCenter([currentCenter.lng + lngDiff, currentCenter.lat])
-    }
-  }
-
   // Toggle sidebar
   const toggleSidebar = () => {
     setIsSidebarVisible(!isSidebarVisible)
-
-    // Trigger map resize immediately and during animation with right edge preservation
-    if (mapRef.current) {
-      resizeMapPreservingRightEdge()
-
-      // Also trigger resize during animation for smooth transition
-      const resizeInterval = setInterval(() => {
-        resizeMapPreservingRightEdge()
-      }, 16) // ~60fps
-
-      // Clean up after animation completes
-      setTimeout(() => {
-        clearInterval(resizeInterval)
-        resizeMapPreservingRightEdge()
-      }, 300)
-    }
   }
 
   // Go back to recommendations

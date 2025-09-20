@@ -107,41 +107,10 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
       mapRef.current = map.current
     }
 
-    // Set up ResizeObserver for smooth resizing that preserves right edge
-    const resizeObserver = new ResizeObserver(() => {
-      if (map.current) {
-        // Get current map bounds and container dimensions
-        const currentBounds = map.current.getBounds()
-        const container = map.current.getContainer()
-        const containerRect = container.getBoundingClientRect()
-
-        // Calculate the right edge in geographic coordinates
-        const rightLng = currentBounds.getEast()
-
-        // Resize the map
-        map.current.resize()
-
-        // After resize, adjust the center to keep the right edge fixed
-        const newBounds = map.current.getBounds()
-        const newRightLng = newBounds.getEast()
-        const lngDiff = rightLng - newRightLng
-
-        if (Math.abs(lngDiff) > 0.0001) { // Only adjust if there's a meaningful difference
-          const currentCenter = map.current.getCenter()
-          map.current.setCenter([currentCenter.lng + lngDiff, currentCenter.lat])
-        }
-      }
-    })
-
-    if (mapContainer.current) {
-      resizeObserver.observe(mapContainer.current)
-    }
-
     return () => {
       if (map.current) {
         map.current.remove()
       }
-      resizeObserver.disconnect()
     }
   }, [])
 
