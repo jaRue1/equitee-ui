@@ -131,10 +131,9 @@ export default function ProfileDropdown({ userProfile, onResetProfile }: Profile
                 router.push('/profile')
                 setIsOpen(false)
               }}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center space-x-2"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <span>👤</span>
-              <span>View Profile</span>
+              View Profile
             </button>
 
             <button
@@ -142,20 +141,18 @@ export default function ProfileDropdown({ userProfile, onResetProfile }: Profile
                 onResetProfile()
                 setIsOpen(false)
               }}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center space-x-2"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <span>🔄</span>
-              <span>Reset Profile</span>
+              Reset Profile
             </button>
 
             <hr className="my-2" />
 
             <button
               onClick={() => signOut()}
-              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center space-x-2"
+              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
-              <span>🚪</span>
-              <span>Sign Out</span>
+              Sign Out
             </button>
           </div>
         </div>

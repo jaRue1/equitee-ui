@@ -9,6 +9,7 @@ import QuickStartWizard from '@/components/QuickStartWizard'
 import GoogleAuth from '@/components/GoogleAuth'
 import ProfileDropdown from '@/components/ProfileDropdown'
 import ChatInterface from '@/components/chat/ChatInterface'
+import FilterPanel from '@/components/ui/FilterPanel'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { Course } from '@/lib/api'
 import { type CourseRecommendation } from '@/types/map'
@@ -43,6 +44,13 @@ interface Recommendation {
   courseId?: string
 }
 
+interface FilterState {
+  priceRange: [number, number]
+  youthPrograms: boolean
+  difficultyRange: [number, number]
+  equipmentRental: boolean
+}
+
 export default function Home() {
   const { data: session } = useSession()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
@@ -73,6 +81,15 @@ export default function Home() {
   const [isQuickStartOpen, setIsQuickStartOpen] = useState(false)
   const [sidebarMode, setSidebarMode] = useState<'recommendations' | 'course-detail'>('recommendations')
   const mapRef = useRef<mapboxgl.Map | null>(null)
+
+  // Filter panel state
+  const [isFilterPanelVisible, setIsFilterPanelVisible] = useState(false)
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    priceRange: [0, 200],
+    youthPrograms: false,
+    difficultyRange: [1, 5],
+    equipmentRental: false
+  })
 
   // Handle course selection from map
   const handleCourseSelect = (course: Course) => {
@@ -148,6 +165,16 @@ export default function Home() {
     setSelectedCourse(null)
   }
 
+  // Handle filter changes
+  const handleFiltersChange = (filters: FilterState) => {
+    setActiveFilters(filters)
+  }
+
+  // Toggle filter panel
+  const toggleFilterPanel = () => {
+    setIsFilterPanelVisible(!isFilterPanelVisible)
+  }
+
   // Handle chat recommendations
   const handleChatRecommendations = (recommendations: CourseRecommendation[]) => {
     console.log('Chat recommendations received:', recommendations)
@@ -175,9 +202,8 @@ export default function Home() {
         <div className="bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200/50 sticky top-0 z-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-green-700">EquiTee</h1>
-                <p className="text-xs sm:text-sm text-gray-600">The Golf Capital Experience</p>
+              <div className="flex items-center">
+                <img src="/logo.png" alt="EquiTee Logo" className="h-10 sm:h-12 object-contain" />
               </div>
               <GoogleAuth />
             </div>
@@ -378,7 +404,9 @@ export default function Home() {
         <div className="bg-gray-900 py-8">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <h4 className="text-xl font-bold text-white mb-2">EquiTee</h4>
+              <div className="flex items-center justify-center mb-2">
+                <img src="/logo.png" alt="EquiTee Logo" className="h-8 object-contain" />
+              </div>
               <p className="text-gray-400 text-sm">
                 Democratizing golf access across South Florida
               </p>
@@ -396,9 +424,8 @@ export default function Home() {
       <div className="bg-white shadow-sm border-b border-gray-200 relative z-30">
         <div className="w-full px-4 py-3">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-green-700">EquiTee</h1>
-              <p className="text-sm text-gray-600">Your Golf Journey Starts Here</p>
+            <div className="flex items-center">
+              <img src="/logo.png" alt="EquiTee Logo" className="h-8 object-contain" />
             </div>
 
             <div className="flex items-center space-x-3">
@@ -551,12 +578,20 @@ export default function Home() {
             selectedCourseId={selectedCourse?.id}
             mapRef={mapRef}
             userLocation={userLocation || undefined}
+            filters={activeFilters}
           />
 
           {/* Chat Interface */}
           <ChatInterface
             onRecommendations={handleChatRecommendations}
             userLocation={userLocation || undefined}
+          />
+
+          {/* Filter Panel */}
+          <FilterPanel
+            onFiltersChange={handleFiltersChange}
+            isVisible={isFilterPanelVisible}
+            onToggle={toggleFilterPanel}
           />
         </div>
       </div>

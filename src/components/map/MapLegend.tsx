@@ -16,11 +16,10 @@ export default function MapLegend({ heatMapVisible, onHeatMapToggle, className =
     { color: '#16a34a', label: '$150k+', range: '$100k+' }
   ]
 
-  const courseTypes = [
-    { color: '#22c55e', icon: '⛳', label: 'Youth Programs', description: 'Courses with youth programs' },
-    { color: '#3b82f6', icon: '🏌️', label: 'Golf Courses', description: 'Standard golf courses' },
-    { color: '#a855f7', icon: '🎁', label: 'Equipment', description: 'Equipment available' },
-    { color: '#f97316', icon: '👨‍🏫', label: 'Mentors', description: 'Mentorship programs' }
+  const coursePricing = [
+    { color: '#22c55e', icon: '⛳', label: 'Low ($0-50)', description: 'Most affordable courses' },
+    { color: '#eab308', icon: '⛳', label: 'Mid ($50-100)', description: 'Moderate pricing' },
+    { color: '#dc2626', icon: '⛳', label: 'High ($100+)', description: 'Premium courses' }
   ]
 
   return (
@@ -44,20 +43,16 @@ export default function MapLegend({ heatMapVisible, onHeatMapToggle, className =
           </button>
         </div>
 
-        {/* Course Types - Horizontal Icons */}
+        {/* Course Pricing - Horizontal Icons */}
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1">
-            <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">⛳</div>
-            <span className="text-xs text-gray-700">Youth</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">🏌️</div>
-            <span className="text-xs text-gray-700">Courses</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs">🎁</div>
-            <span className="text-xs text-gray-700">Equipment</span>
-          </div>
+          {coursePricing.map((pricing, index) => (
+            <div key={index} className="flex items-center space-x-1">
+              <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs" style={{ backgroundColor: pricing.color }}>
+                {pricing.icon}
+              </div>
+              <span className="text-xs text-gray-700">{pricing.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 

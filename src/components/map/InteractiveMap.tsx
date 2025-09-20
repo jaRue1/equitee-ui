@@ -7,14 +7,22 @@ import { fetchCourses, fetchMapConfig, Course, MapConfig } from '@/lib/api'
 import HeatMapLayer, { type DemographicData } from './HeatMapLayer'
 import MapLegend from './MapLegend'
 
+interface FilterState {
+  priceRange: [number, number]
+  youthPrograms: boolean
+  difficultyRange: [number, number]
+  equipmentRental: boolean
+}
+
 interface InteractiveMapProps {
   onCourseSelect?: (course: Course) => void
   selectedCourseId?: string
   mapRef?: React.MutableRefObject<mapboxgl.Map | null>
   userLocation?: { lat: number; lng: number }
+  filters?: FilterState
 }
 
-export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRef, userLocation }: InteractiveMapProps) {
+export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRef, userLocation, filters }: InteractiveMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -251,7 +259,7 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
     if (mapLoaded && !coursesLoading && courses.length > 0) {
       addCourseMarkers()
     }
-  }, [mapLoaded, coursesLoading, courses])
+  }, [mapLoaded, coursesLoading, courses, filters])
 
   // Handle selected course navigation
   useEffect(() => {
@@ -332,16 +340,52 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
 
     // Add course markers
     if (Array.isArray(courses)) {
-      courses.forEach((course) => {
-      // Create custom marker element
+      courses
+        .filter((course) => {
+          // Apply filters if they exist
+          if (!filters) return true
+
+          const avgPrice = (course.greenFeeMin + course.greenFeeMax) / 2
+
+          // Price range filter
+          if (avgPrice < filters.priceRange[0] || avgPrice > filters.priceRange[1]) {
+            return false
+          }
+
+          // Difficulty range filter
+          if (course.difficultyRating < filters.difficultyRange[0] || course.difficultyRating > filters.difficultyRange[1]) {
+            return false
+          }
+
+          // Youth programs filter
+          if (filters.youthPrograms && !course.youthPrograms) {
+            return false
+          }
+
+          // Equipment rental filter
+          if (filters.equipmentRental && !course.equipmentRental) {
+            return false
+          }
+
+          return true
+        })
+        .forEach((course) => {
+      // Create custom marker element with simple price-based color coding
       const markerElement = document.createElement('div')
       markerElement.className = 'course-marker'
+
+      // Calculate price category for accessibility
+      const avgPrice = (course.greenFeeMin + course.greenFeeMax) / 2
+      let priceColor = 'bg-red-500' // Default: expensive/less accessible
+
+      if (avgPrice <= 50) {
+        priceColor = 'bg-green-500' // Affordable/most accessible
+      } else if (avgPrice <= 100) {
+        priceColor = 'bg-yellow-500' // Moderate pricing
+      }
+
       markerElement.innerHTML = `
-        <div class="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110 ${
-          course.youthPrograms
-            ? 'bg-green-500 text-white'
-            : 'bg-blue-500 text-white'
-        }">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110 ${priceColor} text-white">
           ⛳
         </div>
       `
