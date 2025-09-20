@@ -99,7 +99,7 @@ export default function Home() {
       if (mapRef.current) {
         mapRef.current.flyTo({
           center: [recommendation.location.lng, recommendation.location.lat],
-          zoom: 14,
+          zoom: 16, // Higher zoom level to match marker clicks
           duration: 1500
         })
       }
@@ -132,12 +132,17 @@ export default function Home() {
     setIsQuickStartOpen(false)
     setSidebarMode('recommendations')
     setIsSidebarVisible(true)
+
+    // Mark onboarding as completed
+    localStorage.setItem('equitee-onboarding-completed', 'true')
   }
 
   // Force onboarding for authenticated users without profile
   useEffect(() => {
     console.log('Session data:', session)
-    if (session && !userProfile) {
+    const hasCompletedOnboarding = localStorage.getItem('equitee-onboarding-completed')
+
+    if (session && !userProfile && !hasCompletedOnboarding) {
       console.log('Opening quick start for authenticated user without profile')
       setIsQuickStartOpen(true)
     }
@@ -204,6 +209,7 @@ export default function Home() {
                     userProfile={userProfile}
                     onResetProfile={() => {
                       localStorage.removeItem('equitee-user-profile')
+                      localStorage.removeItem('equitee-onboarding-completed')
                       setUserProfile(null)
                       setSidebarMode('recommendations')
                     }}

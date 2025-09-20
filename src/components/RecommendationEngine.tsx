@@ -174,18 +174,18 @@ export default function RecommendationEngine({
     <>
       {/* Floating Sidebar - Left Side */}
       <div className={`
-        fixed left-4 top-20 bottom-20 w-96 bg-white rounded-2xl shadow-2xl z-40
+        fixed left-4 top-20 bottom-20 w-80 bg-white rounded-2xl shadow-2xl z-40 overflow-hidden
         transform transition-all duration-500 ease-in-out
         ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}
       `}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-2xl">
+        <div className="bg-gray-800 text-white p-6 rounded-t-2xl">
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-xl font-bold mb-1">
                 {userProfile?.name ? `Hey ${userProfile.name}!` : 'Your Golf Journey'}
               </h2>
-              <p className="text-green-100 text-sm">
+              <p className="text-gray-300 text-sm">
                 {userProfile?.golfExperience === 'never-played'
                   ? 'Let\'s get you started!'
                   : 'Your next steps await'}
@@ -217,7 +217,7 @@ export default function RecommendationEngine({
         </div>
 
         {/* Content */}
-        <div className="p-4 h-full overflow-y-auto pb-20">
+        <div className="p-4 h-full overflow-y-auto pb-24 flex flex-col">
           {!userProfile ? (
             // Quick Start for new users
             <div className="text-center py-8">
@@ -242,7 +242,7 @@ export default function RecommendationEngine({
                 <div
                   key={rec.id}
                   className={`
-                    border rounded-xl p-4 transition-all duration-300 hover:shadow-lg transform hover:scale-102
+                    border rounded-xl p-4 transition-all duration-300 hover:shadow-lg transform hover:scale-[1.02]
                     ${rec.priority === 'high' ? 'border-green-200 bg-green-50' :
                       rec.priority === 'medium' ? 'border-blue-200 bg-blue-50' :
                       'border-gray-200 bg-gray-50'}
@@ -295,7 +295,7 @@ export default function RecommendationEngine({
           {/* Quick Actions */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <h4 className="font-semibold text-sm mb-3">Quick Actions</h4>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <button className="bg-white border border-gray-300 py-2 px-3 rounded-lg text-xs hover:bg-gray-50 transition-colors">
                 📞 Contact Coach
               </button>
@@ -317,7 +317,7 @@ export default function RecommendationEngine({
       {!isVisible && (
         <button
           onClick={onToggle}
-          className="fixed left-4 top-32 bg-gradient-to-r from-green-500 to-blue-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all z-30"
+          className="fixed left-4 top-32 bg-gray-800 text-white p-3 rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all z-30"
         >
           <span className="text-lg">🎯</span>
         </button>

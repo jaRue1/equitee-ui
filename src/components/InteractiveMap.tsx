@@ -153,6 +153,9 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
   const addCourseMarkers = () => {
     if (!map.current) return
 
+    let activeMarker: mapboxgl.Marker | null = null
+    let activePopup: mapboxgl.Popup | null = null
+
     // Add course markers
     sampleCourses.forEach((course) => {
       // Create custom marker element
@@ -162,7 +165,7 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         <div class="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-110 ${
           course.youthPrograms
             ? 'bg-green-500 text-white'
-            : 'bg-gray-400 text-white'
+            : 'bg-blue-500 text-white'
         }">
           ⛳
         </div>
@@ -171,7 +174,7 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
       // Create popup
       const popup = new mapboxgl.Popup({
         offset: 25,
-        closeButton: false,
+        closeButton: true,
         closeOnClick: false
       }).setHTML(`
         <div class="p-3 min-w-[200px]">
@@ -181,25 +184,78 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
             <span class="text-green-600 font-bold">$${course.greenFeeMin}-${course.greenFeeMax}</span>
             ${course.youthPrograms ? '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Youth Programs</span>' : ''}
           </div>
-          <div class="text-sm text-gray-500">
+          <div class="text-sm text-gray-500 mb-3">
             Difficulty: ${course.difficultyRating}/5 ⭐
           </div>
+          <button class="w-full bg-green-600 text-white py-2 px-3 rounded text-sm hover:bg-green-700 transition-colors" onclick="window.selectCourse('${course.id}')">
+            View Details
+          </button>
         </div>
       `)
 
       // Create marker
       const marker = new mapboxgl.Marker(markerElement)
         .setLngLat([course.lng, course.lat])
-        .setPopup(popup)
         .addTo(map.current!)
 
       // Add click handler
       markerElement.addEventListener('click', () => {
+        // Close any existing popup
+        if (activePopup) {
+          activePopup.remove()
+        }
+
+        // Remove active styling from previous marker
+        if (activeMarker) {
+          const prevElement = activeMarker.getElement().querySelector('div')
+          if (prevElement) {
+            prevElement.classList.remove('ring-4', 'ring-white', 'ring-opacity-75', 'scale-125')
+          }
+        }
+
+        // Add active styling to current marker
+        const currentElement = markerElement.querySelector('div')
+        if (currentElement) {
+          currentElement.classList.add('ring-4', 'ring-white', 'ring-opacity-75', 'scale-125')
+        }
+
+        // Set popup and marker as active
+        popup.setLngLat([course.lng, course.lat]).addTo(map.current!)
+        activePopup = popup
+        activeMarker = marker
+
+        // Zoom to the marker with higher zoom level
+        map.current!.flyTo({
+          center: [course.lng, course.lat],
+          zoom: 16, // Higher zoom level
+          duration: 1500,
+          essential: true
+        })
+
+        // Trigger course selection callback
         if (onCourseSelect) {
           onCourseSelect(course)
         }
       })
+
+      // Handle popup close
+      popup.on('close', () => {
+        const currentElement = markerElement.querySelector('div')
+        if (currentElement) {
+          currentElement.classList.remove('ring-4', 'ring-white', 'ring-opacity-75', 'scale-125')
+        }
+        activePopup = null
+        activeMarker = null
+      })
     })
+
+    // Global function for popup button clicks
+    (window as any).selectCourse = (courseId: string) => {
+      const course = sampleCourses.find(c => c.id === courseId)
+      if (course && onCourseSelect) {
+        onCourseSelect(course)
+      }
+    }
 
     // Add source and layer for clustering if needed
     map.current!.addSource('courses', {
@@ -264,14 +320,6 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         </div>
       </div>
 
-      {/* Accessibility info */}
-      <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
-        <h4 className="font-semibold text-sm mb-2">Accessibility Gap Analysis</h4>
-        <p className="text-xs text-gray-600">
-          Green markers indicate courses with youth programs.
-          Gaps in coverage show underserved areas.
-        </p>
-      </div>
     </div>
   )
 }
