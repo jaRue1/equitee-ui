@@ -11,7 +11,7 @@ export default function CoursesPage() {
             <div className="flex justify-between items-center mb-4">
               <span className="text-green-600 font-bold">$45-85</span>
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                Youth Programs
+                Youth Program
               </span>
             </div>
             <button className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
