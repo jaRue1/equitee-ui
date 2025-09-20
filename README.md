@@ -1,1 +1,0 @@
-# equitee-ui
