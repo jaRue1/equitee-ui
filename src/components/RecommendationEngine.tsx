@@ -24,10 +24,12 @@ interface Recommendation {
   price?: string
   distance?: string
   completed?: boolean
+  location?: { lat: number; lng: number }
+  courseId?: string
 }
 
 interface RecommendationEngineProps {
-  userProfile?: UserProfile
+  userProfile?: UserProfile | null
   onActionClick: (recommendation: Recommendation) => void
   isVisible: boolean
   onToggle: () => void

@@ -100,13 +100,13 @@ function RegistrationTypeStep({ onNext }: { onNext: (type: 'self' | 'child') => 
           onClick={() => onNext('self')}
           className="w-full bg-green-600 text-white py-4 px-6 rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
         >
-          I'm registering for myself
+          I&apos;m registering for myself
         </button>
         <button
           onClick={() => onNext('child')}
           className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
         >
-          I'm registering for my child
+          I&apos;m registering for my child
         </button>
       </div>
     </div>
@@ -137,7 +137,7 @@ function UserTypeStep({
               className="p-6 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all"
             >
               <h3 className="font-semibold text-lg mb-2">Parent/Guardian</h3>
-              <p className="text-gray-600">I'm registering my child for golf programs</p>
+              <p className="text-gray-600">I&apos;m registering my child for golf programs</p>
             </button>
             <button
               onClick={() => onNext('sponsor')}
@@ -210,7 +210,7 @@ function PersonalInfoStep({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            {data.registrationType === 'child' ? "Child's Name" : "Full Name"}
+            {data.registrationType === 'child' ? "Child&apos;s Name" : "Full Name"}
           </label>
           <input
             type="text"
@@ -247,7 +247,7 @@ function PersonalInfoStep({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {data.registrationType === 'child' ? "Child's Age" : "Age"}
+              {data.registrationType === 'child' ? "Child&apos;s Age" : "Age"}
             </label>
             <input
               type="number"
@@ -321,7 +321,7 @@ function GolfInfoStep({
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">
-            {data.registrationType === 'child' ? "Child's Golf Experience" : "Your Golf Experience"}
+            {data.registrationType === 'child' ? "Child&apos;s Golf Experience" : "Your Golf Experience"}
           </label>
           <div className="grid grid-cols-2 gap-3">
             {(['beginner', 'intermediate', 'advanced', 'pro'] as GolfExperience[]).map((level) => (

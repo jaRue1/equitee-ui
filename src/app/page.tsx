@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import InteractiveMap from '@/components/InteractiveMap'
 import RecommendationEngine from '@/components/RecommendationEngine'
 import QuickStartWizard from '@/components/QuickStartWizard'
@@ -220,7 +221,7 @@ export default function Home() {
                 Breaking Down Barriers
               </h3>
               <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
-                Golf shouldn't be exclusive. We're changing that in South Florida, one swing at a time.
+                Golf shouldn&apos;t be exclusive. We&apos;re changing that in South Florida, one swing at a time.
               </p>
             </div>
 
@@ -297,7 +298,7 @@ export default function Home() {
                   Everything You Need to Succeed
                 </h3>
                 <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
-                  We believe every young person deserves the chance to experience golf. Here's how we make it happen.
+                  We believe every young person deserves the chance to experience golf. Here&apos;s how we make it happen.
                 </p>
               </div>
 
@@ -391,19 +392,19 @@ export default function Home() {
             <div className="flex items-center space-x-3">
               {userProfile && (
                 <>
-                  <a
+                  <Link
                     href="/equipment"
                     className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                   >
                     Equipment
-                  </a>
+                  </Link>
 
-                  <a
+                  <Link
                     href="/courses"
                     className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                   >
                     Courses
-                  </a>
+                  </Link>
                 </>
               )}
 

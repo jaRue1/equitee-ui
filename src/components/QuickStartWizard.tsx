@@ -150,9 +150,9 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
           {step === 1 && (
             <div className="text-center">
               <div className="text-6xl mb-6">👋</div>
-              <h3 className="text-2xl font-bold mb-4">Let's complete your profile!</h3>
+              <h3 className="text-2xl font-bold mb-4">Let&apos;s complete your profile!</h3>
               <p className="text-gray-600 mb-6">
-                We've pre-filled some details from Google. Let's add a few more.
+                We&apos;ve pre-filled some details from Google. Let&apos;s add a few more.
               </p>
 
               <div className="space-y-4 mb-6">
@@ -243,10 +243,10 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
             <div className="text-center">
               <div className="text-6xl mb-6">🏌️</div>
               <h3 className="text-2xl font-bold mb-4">
-                Hey {profile.name}! What's your golf experience?
+                Hey {profile.name}! What&apos;s your golf experience?
               </h3>
               <p className="text-gray-600 mb-6">
-                Be honest - we'll tailor everything to your level!
+                Be honest - we&apos;ll tailor everything to your level!
               </p>
 
               <div className="space-y-4 mb-8">
@@ -255,13 +255,13 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
                     id: 'never-played',
                     emoji: '🌱',
                     title: 'Never played golf',
-                    description: 'I\'m completely new to this!'
+                    description: 'I&apos;m completely new to this!'
                   },
                   {
                     id: 'beginner',
                     emoji: '🎯',
                     title: 'Tried it a few times',
-                    description: 'I\'ve swung a club but need help'
+                    description: 'I&apos;ve swung a club but need help'
                   },
                   {
                     id: 'intermediate',
@@ -332,7 +332,7 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
                   {
                     id: 'parent',
                     emoji: '👨‍👩‍👧‍👦',
-                    title: 'I\'m finding golf for my child',
+                    title: 'I&apos;m finding golf for my child',
                     description: 'Youth programs and family-friendly courses'
                   },
                   {
@@ -396,7 +396,7 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
               <div className="text-6xl mb-6">📍</div>
               <h3 className="text-2xl font-bold mb-4">Where are you located?</h3>
               <p className="text-gray-600 mb-6">
-                We'll show you the best courses and equipment nearby
+                We&apos;ll show you the best courses and equipment nearby
               </p>
 
               <input
@@ -410,7 +410,7 @@ export default function QuickStartWizard({ onComplete, onClose, isOpen, googleUs
               />
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <h4 className="font-semibold text-blue-800 mb-2">🎯 What you'll get:</h4>
+                <h4 className="font-semibold text-blue-800 mb-2">🎯 What you&apos;ll get:</h4>
                 <ul className="text-blue-700 text-sm space-y-1 text-left">
                   <li>• Personalized course recommendations</li>
                   <li>• Free & affordable equipment near you</li>

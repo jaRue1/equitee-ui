@@ -227,7 +227,7 @@ export default function CourseDrawer({ course, isOpen, onClose }: CourseDrawerPr
                   <div className="text-gray-400 text-6xl mb-4">⛳</div>
                   <h3 className="font-semibold text-lg mb-2">No Youth Programs</h3>
                   <p className="text-gray-600">
-                    This course doesn't currently offer youth programs.
+                    This course doesn&apos;t currently offer youth programs.
                   </p>
                   <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                     Suggest Youth Program

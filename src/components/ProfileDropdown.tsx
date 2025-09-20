@@ -4,13 +4,21 @@ import { useState, useRef, useEffect } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
+interface UserProfile {
+  name: string
+  email: string
+  age: number
+  golfExperience: 'never-played' | 'beginner' | 'intermediate'
+  zipCode: string
+  userType: 'youth' | 'parent' | 'sponsor' | 'mentor'
+  goals: string[]
+  hasEquipment: boolean
+  interests: string[]
+  completedSteps: string[]
+}
+
 interface ProfileDropdownProps {
-  userProfile?: {
-    name: string
-    email: string
-    userType: string
-    golfExperience: string
-  }
+  userProfile?: UserProfile | null
   onResetProfile: () => void
 }
 
