@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import InteractiveMap from '@/components/InteractiveMap'
 import RecommendationEngine from '@/components/RecommendationEngine'
 import QuickStartWizard from '@/components/QuickStartWizard'
+import GoogleAuth from '@/components/GoogleAuth'
+import ProfileDropdown from '@/components/ProfileDropdown'
 import mapboxgl from 'mapbox-gl'
 
 interface Course {
@@ -21,9 +24,13 @@ interface Course {
 
 interface UserProfile {
   name: string
+  email: string
   age: number
   golfExperience: 'never-played' | 'beginner' | 'intermediate'
   zipCode: string
+  userType: 'youth' | 'parent' | 'sponsor' | 'mentor'
+  goals: string[]
+  hasEquipment: boolean
   interests: string[]
   completedSteps: string[]
 }
@@ -45,7 +52,28 @@ interface Recommendation {
 }
 
 export default function Home() {
+  const { data: session } = useSession()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+
+  // Load user profile from localStorage on mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('equitee-user-profile')
+    if (savedProfile) {
+      try {
+        setUserProfile(JSON.parse(savedProfile))
+      } catch (error) {
+        console.error('Error loading user profile:', error)
+        localStorage.removeItem('equitee-user-profile')
+      }
+    }
+  }, [])
+
+  // Save user profile to localStorage whenever it changes
+  useEffect(() => {
+    if (userProfile) {
+      localStorage.setItem('equitee-user-profile', JSON.stringify(userProfile))
+    }
+  }, [userProfile])
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [isSidebarVisible, setIsSidebarVisible] = useState(true)
   const [isQuickStartOpen, setIsQuickStartOpen] = useState(false)
@@ -93,16 +121,27 @@ export default function Home() {
 
   // Handle quick start completion
   const handleQuickStartComplete = (profile: Omit<UserProfile, 'interests' | 'completedSteps'>) => {
+    console.log('handleQuickStartComplete called with:', profile)
     const fullProfile: UserProfile = {
       ...profile,
       interests: [],
       completedSteps: []
     }
+    console.log('Setting user profile to:', fullProfile)
     setUserProfile(fullProfile)
     setIsQuickStartOpen(false)
     setSidebarMode('recommendations')
     setIsSidebarVisible(true)
   }
+
+  // Force onboarding for authenticated users without profile
+  useEffect(() => {
+    console.log('Session data:', session)
+    if (session && !userProfile) {
+      console.log('Opening quick start for authenticated user without profile')
+      setIsQuickStartOpen(true)
+    }
+  }, [session, userProfile])
 
   // Toggle sidebar
   const toggleSidebar = () => {
@@ -139,28 +178,38 @@ export default function Home() {
             </div>
 
             <div className="flex items-center space-x-3">
-              {!userProfile && (
-                <button
-                  onClick={() => setIsQuickStartOpen(true)}
-                  className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-2 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all font-semibold"
-                >
-                  🎯 Get Started
-                </button>
+              {!session ? (
+                <GoogleAuth />
+              ) : (
+                <>
+                  {userProfile && (
+                    <>
+                      <a
+                        href="/equipment"
+                        className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                      >
+                        Equipment
+                      </a>
+
+                      <a
+                        href="/courses"
+                        className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                      >
+                        Courses
+                      </a>
+                    </>
+                  )}
+
+                  <ProfileDropdown
+                    userProfile={userProfile}
+                    onResetProfile={() => {
+                      localStorage.removeItem('equitee-user-profile')
+                      setUserProfile(null)
+                      setSidebarMode('recommendations')
+                    }}
+                  />
+                </>
               )}
-
-              <a
-                href="/equipment"
-                className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-              >
-                Equipment
-              </a>
-
-              <a
-                href="/courses"
-                className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-              >
-                Courses
-              </a>
             </div>
           </div>
         </div>
@@ -305,6 +354,8 @@ export default function Home() {
         isOpen={isQuickStartOpen}
         onClose={() => setIsQuickStartOpen(false)}
         onComplete={handleQuickStartComplete}
+        googleUser={session?.user}
+        forced={session && !userProfile ? true : false}
       />
     </main>
   )

@@ -88,13 +88,17 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: 'mapbox://styles/mapbox/satellite-streets-v12', // 3D satellite view
       center: [-80.2911, 25.7617], // Miami center
-      zoom: 10
+      zoom: 10,
+      pitch: 45, // 3D tilt
+      bearing: 0,
+      antialias: true // Smooth 3D rendering
     })
 
     map.current.on('load', () => {
       setMapLoaded(true)
+      add3DBuildings()
       addCourseMarkers()
     })
 
@@ -109,6 +113,42 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
       }
     }
   }, [])
+
+  const add3DBuildings = () => {
+    if (!map.current) return
+
+    // Add 3D buildings layer
+    map.current.addLayer({
+      id: '3d-buildings',
+      source: 'composite',
+      'source-layer': 'building',
+      filter: ['==', 'extrude', 'true'],
+      type: 'fill-extrusion',
+      minzoom: 12,
+      paint: {
+        'fill-extrusion-color': '#aaa',
+        'fill-extrusion-height': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12,
+          0,
+          15.05,
+          ['get', 'height']
+        ],
+        'fill-extrusion-base': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12,
+          0,
+          15.05,
+          ['get', 'min_height']
+        ],
+        'fill-extrusion-opacity': 0.6
+      }
+    })
+  }
 
   const addCourseMarkers = () => {
     if (!map.current) return
@@ -194,16 +234,32 @@ export default function InteractiveMap({ onCourseSelect, selectedCourseId, mapRe
         </div>
       )}
 
-      {/* Map controls */}
-      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3">
-        <div className="flex flex-col space-y-2">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+      {/* Map Legend - Top Right */}
+      <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 min-w-[200px]">
+        <h4 className="font-semibold text-sm mb-3">Map Legend</h4>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-3">
+            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">⛳</div>
             <span className="text-sm">Youth Programs</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
-            <span className="text-sm">Adults Only</span>
+          <div className="flex items-center space-x-3">
+            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">🏌️</div>
+            <span className="text-sm">Golf Courses</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs">🎁</div>
+            <span className="text-sm">Equipment</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs">👨‍🏫</div>
+            <span className="text-sm">Mentors</span>
+          </div>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="flex items-center space-x-2 text-xs text-gray-600">
+            <span>🔄</span>
+            <span>3D View Active</span>
           </div>
         </div>
       </div>

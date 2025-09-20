@@ -172,11 +172,11 @@ export default function RecommendationEngine({
 
   return (
     <>
-      {/* Floating Sidebar */}
+      {/* Floating Sidebar - Left Side */}
       <div className={`
-        fixed right-4 top-20 bottom-20 w-96 bg-white rounded-2xl shadow-2xl z-40
+        fixed left-4 top-20 bottom-20 w-96 bg-white rounded-2xl shadow-2xl z-40
         transform transition-all duration-500 ease-in-out
-        ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
+        ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}
       `}>
         {/* Header */}
         <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-2xl">
@@ -195,7 +195,7 @@ export default function RecommendationEngine({
               onClick={onToggle}
               className="text-white hover:text-gray-200 text-xl transform hover:scale-110 transition-transform"
             >
-              {isVisible ? '→' : '←'}
+              {isVisible ? '←' : '→'}
             </button>
           </div>
 
@@ -317,7 +317,7 @@ export default function RecommendationEngine({
       {!isVisible && (
         <button
           onClick={onToggle}
-          className="fixed right-4 top-32 bg-gradient-to-r from-green-500 to-blue-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all z-30"
+          className="fixed left-4 top-32 bg-gradient-to-r from-green-500 to-blue-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all z-30"
         >
           <span className="text-lg">🎯</span>
         </button>
