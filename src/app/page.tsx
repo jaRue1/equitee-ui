@@ -324,11 +324,13 @@ export default function Home() {
               <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-8">
                 The Golf Capital of the World
               </h3>
-              <p className="text-lg sm:text-xl text-gray-700 mb-12 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-700 mb-6 leading-relaxed">
                 South Florida is home to over 400 golf courses, perfect weather year-round, and a thriving golf community.
+                But access barriers have kept many talented youth on the sidelines.
               </p>
-
-                But access barriers have kept many talented youth on the sidelines. <strong className="text-green-600">That changes now.</strong>
+              <p className="text-xl sm:text-2xl font-bold text-green-600 mb-12">
+                That changes now.
+              </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 <div className="text-center bg-white rounded-xl p-6 shadow-lg border border-gray-200 opacity-0 animate-fadeInUp hover:scale-105 transition-transform duration-300 [animation-delay:200ms]">
                   <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-green-600 to-green-500 bg-clip-text text-transparent mb-2">400+</div>
